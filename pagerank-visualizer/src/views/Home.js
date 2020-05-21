@@ -5,9 +5,7 @@ import Graph from 'vis-react';
 import Select from 'react-select';
 
 import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
-import CardHeader from '@material-ui/core/CardHeader';
 
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -24,6 +22,8 @@ import TextField from '@material-ui/core/TextField';
 import { withStyles } from '@material-ui/styles';
 
 import Button from '@material-ui/core/Button';
+
+import { sqrt, matrix, fraction, format, zeros, index, subset } from 'mathjs';
 
 const styles = theme => ({ root: { overflow: 'visible' } });
 
@@ -117,9 +117,73 @@ class Home extends React.Component {
         modal: {
             open: false,
             type: null
+        },
+
+        pagerank: {
+            dampening: 0.85,
+            noIterations: 100,
         }
 
     }
+
+    componentDidMount() {
+        console.log(this.fullPageRank())
+    }
+
+    // PAGERANK COMPUTATIONS ///////////////////////
+    fullPageRank() {
+        var start = []
+        var initialVal = fraction(1, this.state.nodes.length)
+
+        // Compute initial vector
+        for (let node of this.state.nodes) {
+            start.push({ "node": node.id, "pr": initialVal })
+        }
+
+        // Compute Hyperlink Matrix
+        this.computeHyperLinkMatrix()
+
+        // Compute iterations
+
+
+    }
+
+    computeHyperLinkMatrix() {
+        var comp = this.state.nodes.length
+        var hMatrix = matrix(zeros([comp, comp]))
+
+        var allNodes = []
+        var index = 0
+        for (let node of this.state.nodes) {
+            allNodes.push({ "id": node.id, "index": index })
+            index++
+        }
+
+        for (let node of allNodes) {
+            var relations = []
+            for (let relation of this.state.edges) {
+                if (relation.from != node.id) {
+                    continue
+                }
+
+                relations.push(allNodes.find(function (n, index) {
+                    if (n.id == relation.to)
+                        return true;
+                }))
+            }
+            
+            var value = fraction(1, relations.length)
+
+            for (let relation of relations){
+                subset(hMatrix, index(node.index, relation.index), value)
+            }
+
+            format(hMatrix, { fraction: 'ratio' })
+
+        }
+    }
+    // PAGERANK COMPUTATIONS ///////////////////////
+
 
     // MODAL CONTROLS ///////////////////////
     handleOpenAdd = () => {
@@ -166,7 +230,7 @@ class Home extends React.Component {
             }
         })
     };
-    
+
     // MODAL CONTROLS ///////////////////////
 
     // SELECT CONTROLS ///////////////////////
@@ -214,7 +278,7 @@ class Home extends React.Component {
         var error = false
 
         var name = document.getElementById("newNodeName")
-        if (name == null || name.value == "" || name.value.replace(" ", "") == "") {
+        if (name === null || name.value === "" || name.value.replace(" ", "") === "") {
             document.getElementById("errorNoName").style.display = ""
             error = true
 
@@ -225,7 +289,7 @@ class Home extends React.Component {
             var already_exists = false
 
             for (let node of this.state.nodes) {
-                if (node.label == name) {
+                if (node.label === name) {
                     already_exists = true
                     break
                 }
@@ -275,7 +339,7 @@ class Home extends React.Component {
         var from = this.state.newLink.from
         var to = this.state.newLink.to
 
-        if (from == null || from.value == "" || to == null || to.value == "") {
+        if (from === null || from.value === "" || to === null || to.value === "") {
             document.getElementById("errorNoLink").style.display = ""
             error = true
 
@@ -285,14 +349,14 @@ class Home extends React.Component {
 
             document.getElementById("errorNoLink").style.display = "none"
 
-            if (from == to) {
+            if (from === to) {
                 document.getElementById("errorLinkSameNode").style.display = ""
                 error = true
             } else {
                 var already_exists = false
 
                 for (let relation of this.state.edges) {
-                    if (relation.from == from && relation.to == to) {
+                    if (relation.from === from && relation.to === to) {
                         already_exists = true
                         break
                     }
@@ -345,7 +409,7 @@ class Home extends React.Component {
 
         var link = this.state.deleteLink
 
-        if (link == null || link.value == "") {
+        if (link === null || link.value === "") {
             document.getElementById("errorNoDeleteLink").style.display = ""
             error = true
 
@@ -360,7 +424,7 @@ class Home extends React.Component {
             var to = link.split(" ")[1]
 
             for (let relation of this.state.edges) {
-                if (relation.from == from && relation.to == to) {
+                if (relation.from === from && relation.to === to) {
                     continue
                 } else {
                     newLinks.push(relation)
@@ -369,7 +433,7 @@ class Home extends React.Component {
 
             var selectNewLinks = []
             for (let relation of this.state.selects.edges) {
-                if (relation.value.split(" ")[0] == from && relation.value.split(" ")[1] == to) {
+                if (relation.value.split(" ")[0] === from && relation.value.split(" ")[1] === to) {
                     continue
                 } else {
                     selectNewLinks.push(relation)
@@ -398,7 +462,7 @@ class Home extends React.Component {
 
         var page = this.state.deletePage
 
-        if (page == null || page.value == "") {
+        if (page === null || page.value === "") {
             document.getElementById("errorNoDeletePage").style.display = ""
             error = true
 
@@ -411,7 +475,7 @@ class Home extends React.Component {
             var newPages = []
 
             for (let node of this.state.nodes) {
-                if (node.id == page) {
+                if (node.id === page) {
                     continue
                 } else {
                     newPages.push(node)
@@ -420,7 +484,7 @@ class Home extends React.Component {
 
             var selectNewNodes = []
             for (let node of this.state.selects.nodes) {
-                if (node.value == page) {
+                if (node.value === page) {
                     continue
                 } else {
                     selectNewNodes.push(node)
@@ -429,7 +493,7 @@ class Home extends React.Component {
 
             var newLinks = []
             for (let relation of this.state.edges) {
-                if (relation.from == page || relation.to == page) {
+                if (relation.from === page || relation.to === page) {
                     continue
                 } else {
                     newLinks.push(relation)
@@ -438,7 +502,7 @@ class Home extends React.Component {
 
             var selectNewLinks = []
             for (let relation of this.state.selects.edges) {
-                if (relation.value.split(" ")[0] == page || relation.value.split(" ")[1] == page) {
+                if (relation.value.split(" ")[0] === page || relation.value.split(" ")[1] === page) {
                     continue
                 } else {
                     selectNewLinks.push(relation)
@@ -465,18 +529,12 @@ class Home extends React.Component {
 
     // GRAPH CONTROLS ///////////////////////
 
-
-    // PAGERANK COMPUTATIONS ///////////////////////
-
-    // PAGERANK COMPUTATIONS ///////////////////////
-
-
     render() {
         const { classes } = this.props;
 
         var modal = <div></div>
         if (this.state.modal.open) {
-            if (this.state.modal.type == "ADD_NODE") {
+            if (this.state.modal.type === "ADD_NODE") {
                 modal = <Dialog
                     open={this.state.modal.open}
                     onClose={() => this.handleClose()}
@@ -509,7 +567,7 @@ class Home extends React.Component {
                 </Dialog>
             }
 
-            else if (this.state.modal.type == "ADD_LINK") {
+            else if (this.state.modal.type === "ADD_LINK") {
                 modal = <Dialog
                     open={this.state.modal.open}
                     onClose={() => this.handleClose()}
@@ -572,7 +630,7 @@ class Home extends React.Component {
                 </Dialog>
             }
 
-            else if (this.state.modal.type == "REMOVE_LINK") {
+            else if (this.state.modal.type === "REMOVE_LINK") {
                 modal = <Dialog
                     open={this.state.modal.open}
                     onClose={() => this.handleClose()}
@@ -611,7 +669,7 @@ class Home extends React.Component {
                 </Dialog>
             }
 
-            else if (this.state.modal.type == "REMOVE_NODE") {
+            else if (this.state.modal.type === "REMOVE_NODE") {
                 modal = <Dialog
                     open={this.state.modal.open}
                     onClose={() => this.handleClose()}
@@ -693,12 +751,6 @@ class Home extends React.Component {
                                     </Button>
                                 </Grid>
                             </Grid>
-
-                            <div style={{ width: "70%", margin: "auto", marginTop: "20px" }}>
-                                <Button variant="outlined" color="primary" style={{ width: "100%" }}>
-                                    Generate random graph
-                                </Button>
-                            </div>
 
                             <hr style={{ color: "#38393b", opacity: 0.2, marginTop: "20px" }}></hr>
 
