@@ -23,7 +23,7 @@ import { withStyles } from '@material-ui/styles';
 
 import Button from '@material-ui/core/Button';
 
-import { sqrt, matrix, fraction, format, zeros, index, subset, multiply } from 'mathjs';
+import { sqrt, matrix, fraction, format, zeros, index, subset, multiply, transpose } from 'mathjs';
 
 const styles = theme => ({ root: { overflow: 'visible' } });
 
@@ -52,17 +52,17 @@ class Home extends React.Component {
 
         selects: {
             nodes: [
-                { value: "A", label: "A" },
-                { value: "B", label: "B" },
-                { value: "C", label: "C" },
-                { value: "D", label: "D" },
-                { value: "E", label: "E" }
+                { value: "P1", label: "P1" },
+                { value: "P2", label: "P2" },
+                { value: "P3", label: "P3" },
+                { value: "P4", label: "P4" },
+                { value: "P5", label: "P5" }
             ],
             edges: [
-                { value: "A B", label: "A -> B" },
-                { value: "A C", label: "A -> C" },
-                { value: "B D", label: "B -> D" },
-                { value: "B E", label: "B -> E" }
+                { value: "P1 P2", label: "P1 -> P2" },
+                { value: "P1 P3", label: "P1 -> P3" },
+                { value: "P2 P4", label: "P2 -> P4" },
+                { value: "P2 P5", label: "P2 -> P5" }
             ],
         },
 
@@ -160,13 +160,11 @@ class Home extends React.Component {
         for (let node of allNodes) {
             curValArray.push(node.pr)
         }
-        curValArray = matrix(curValArray)
-        console.log(format(curValArray, { fraction: 'decimal' }))
 
 
         for (var i = 0; i < this.state.pagerank.noIterations; i++) {
+            console.log(multiply(this.state.hMatrix, curValArray))
             var nextValArray = multiply(this.state.hMatrix, curValArray)
-            console.log(format(nextValArray, { fraction: 'decimal' }))
             curValArray = nextValArray
         }
 
@@ -179,24 +177,6 @@ class Home extends React.Component {
         }
 
         console.log(format(allNodes, { fraction: 'decimal' }))
-
-        var newNodes = []
-        for (let node of this.state.nodes) {
-            node.label = node.label + " (" + format(allNodes.find(function (n, index) {
-                if (n.id == node.id)
-                    return true;
-            }).pr, { fraction: 'decimal' }) + ")"
-
-            newNodes.push(node)
-        }
-
-
-        await this.setState({
-            nodes: newNodes,
-        })
-
-        await this.state.graphRef.body.emitter.emit('_dataChanged')
-        await this.state.graphRef.redraw()
     }
 
     async computeHyperLinkMatrix(allNodes) {
@@ -231,10 +211,15 @@ class Home extends React.Component {
 
 
             for (let relation of relations) {
+                if(relation == undefined || relation == null){
+                    continue
+                }
                 hMatrix.subset(index(node.index, relation.index), value)
             }
 
         }
+
+        hMatrix = transpose(hMatrix)
 
         await this.setState({
             hMatrix: hMatrix
@@ -383,6 +368,8 @@ class Home extends React.Component {
                 },
             })
 
+            this.fullPageRank()
+
             await this.state.graphRef.body.emitter.emit('_dataChanged')
             await this.state.graphRef.redraw()
 
@@ -454,6 +441,8 @@ class Home extends React.Component {
                 }
             })
 
+            this.fullPageRank()
+
             await this.state.graphRef.body.emitter.emit('_dataChanged')
             await this.state.graphRef.redraw()
 
@@ -506,6 +495,8 @@ class Home extends React.Component {
                 },
                 deleteLink: null
             })
+
+            this.fullPageRank()
 
             await this.state.graphRef.body.emitter.emit('_dataChanged')
             await this.state.graphRef.redraw()
@@ -576,6 +567,8 @@ class Home extends React.Component {
                 },
                 deletePage: null
             })
+
+            this.fullPageRank()
 
             await this.state.graphRef.body.emitter.emit('_dataChanged')
             await this.state.graphRef.redraw()
