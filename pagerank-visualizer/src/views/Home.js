@@ -23,7 +23,7 @@ import { withStyles } from '@material-ui/styles';
 
 import Button from '@material-ui/core/Button';
 
-import { sqrt, matrix, fraction, format, zeros, index, subset } from 'mathjs';
+import { sqrt, matrix, fraction, format, zeros, index, subset, multiply } from 'mathjs';
 
 const styles = theme => ({ root: { overflow: 'visible' } });
 
@@ -34,17 +34,20 @@ class Home extends React.Component {
 
     state = {
         nodes: [
-            { id: "A", label: "A" },
-            { id: "B", label: "B" },
-            { id: "C", label: "C" },
-            { id: "D", label: "D" },
-            { id: "E", label: "E" }
+            { id: "P1", label: "P1" },
+            { id: "P2", label: "P2" },
+            { id: "P3", label: "P3" },
+            { id: "P4", label: "P4" },
+            { id: "P5", label: "P5" }
         ],
         edges: [
-            { from: "A", to: "B" },
-            { from: "A", to: "C" },
-            { from: "B", to: "D" },
-            { from: "B", to: "E" }
+            { from: "P1", to: "P2" },
+            { from: "P2", to: "P1" },
+            { from: "P2", to: "P5" },
+            { from: "P3", to: "P2" },
+            { from: "P4", to: "P2" },
+            { from: "P4", to: "P5" },
+            { from: "P5", to: "P3" },
         ],
 
         selects: {
@@ -121,17 +124,19 @@ class Home extends React.Component {
 
         pagerank: {
             dampening: 0.85,
-            noIterations: 100,
-        }
+            noIterations: 20,
+        },
+
+        hMatrix: null
 
     }
 
     componentDidMount() {
-        console.log(this.fullPageRank())
+        this.fullPageRank()
     }
 
     // PAGERANK COMPUTATIONS ///////////////////////
-    fullPageRank() {
+    async fullPageRank() {
         var start = []
         var initialVal = fraction(1, this.state.nodes.length)
 
@@ -139,24 +144,72 @@ class Home extends React.Component {
         for (let node of this.state.nodes) {
             start.push({ "node": node.id, "pr": initialVal })
         }
+        var allNodes = []
+        var i = 0
+        for (let node of this.state.nodes) {
+            allNodes.push({ "id": node.id, "index": i, "pr": initialVal })
+            i++
+        }
 
         // Compute Hyperlink Matrix
-        this.computeHyperLinkMatrix()
+        await this.computeHyperLinkMatrix(allNodes)
+        //console.log(format(this.state.hMatrix, { fraction: 'decimal' }))
 
         // Compute iterations
+        var curValArray = []
+        for (let node of allNodes) {
+            curValArray.push(node.pr)
+        }
+        curValArray = matrix(curValArray)
+        console.log(format(curValArray, { fraction: 'decimal' }))
 
 
+        for (var i = 0; i < this.state.pagerank.noIterations; i++) {
+            var nextValArray = multiply(this.state.hMatrix, curValArray)
+            console.log(format(nextValArray, { fraction: 'decimal' }))
+            curValArray = nextValArray
+        }
+
+        // Update Values
+        for (var j = 0; j < allNodes.length; j++) {
+            allNodes.find(function (n, index) {
+                if (n.index == j)
+                    return true;
+            }).pr = curValArray._data[j]
+        }
+
+        console.log(format(allNodes, { fraction: 'decimal' }))
+
+        var newNodes = []
+        for (let node of this.state.nodes) {
+            node.label = node.label + " (" + format(allNodes.find(function (n, index) {
+                if (n.id == node.id)
+                    return true;
+            }).pr, { fraction: 'decimal' }) + ")"
+
+            newNodes.push(node)
+        }
+
+
+        await this.setState({
+            nodes: newNodes,
+        })
+
+        await this.state.graphRef.body.emitter.emit('_dataChanged')
+        await this.state.graphRef.redraw()
     }
 
-    computeHyperLinkMatrix() {
+    async computeHyperLinkMatrix(allNodes) {
         var comp = this.state.nodes.length
         var hMatrix = matrix(zeros([comp, comp]))
 
-        var allNodes = []
-        var index = 0
-        for (let node of this.state.nodes) {
-            allNodes.push({ "id": node.id, "index": index })
-            index++
+        if (allNodes == null) {
+            allNodes = []
+            var i = 0
+            for (let node of this.state.nodes) {
+                allNodes.push({ "id": node.id, "index": i })
+                i++
+            }
         }
 
         for (let node of allNodes) {
@@ -171,16 +224,21 @@ class Home extends React.Component {
                         return true;
                 }))
             }
-            
-            var value = fraction(1, relations.length)
-
-            for (let relation of relations){
-                subset(hMatrix, index(node.index, relation.index), value)
+            var value = 0
+            if (relations.length != 0) {
+                value = fraction(1, relations.length)
             }
 
-            format(hMatrix, { fraction: 'ratio' })
+
+            for (let relation of relations) {
+                hMatrix.subset(index(node.index, relation.index), value)
+            }
 
         }
+
+        await this.setState({
+            hMatrix: hMatrix
+        })
     }
     // PAGERANK COMPUTATIONS ///////////////////////
 
