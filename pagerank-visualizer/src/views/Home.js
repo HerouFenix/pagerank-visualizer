@@ -39,7 +39,8 @@ import {
   index,
   subset,
   multiply,
-  transpose
+  transpose,
+  round
 } from 'mathjs'
 
 const styles = theme => ({ root: { overflow: 'visible' } })
@@ -1154,7 +1155,9 @@ class Home extends React.Component {
                                   {pagerank.outgoing}
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(pagerank.pr, { fraction: 'decimal' })}
+                                  {format(round(pagerank.pr, 12), {
+                                    fraction: 'decimal'
+                                  })}
                                 </TableCell>
                               </TableRow>
                             ))}
