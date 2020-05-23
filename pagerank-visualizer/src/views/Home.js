@@ -188,7 +188,7 @@ class Home extends React.Component {
     curValArray = matrix(curValArray)
 
     for (var i = 0; i < this.state.pagerank.noIterations; i++) {
-      var nextValArray = multiply(this.state.hMatrix, curValArray)
+      var nextValArray = multiply(transpose(curValArray), this.state.hMatrix)
       curValArray = nextValArray
     }
 
@@ -255,7 +255,7 @@ class Home extends React.Component {
       }
     }
 
-    hMatrix = transpose(hMatrix)
+    hMatrix = hMatrix
 
     await this.setState({
       hMatrix: hMatrix
@@ -288,6 +288,51 @@ class Home extends React.Component {
     })
 
     this.fullPageRank()
+  }
+
+  jumpToIteration = async () => {
+    var error = false
+    var iteration = document.getElementById('jumpToIteration')
+    if (
+      iteration === null ||
+      iteration.value === ''
+    ) {
+      iteration = 0
+      document.getElementById('errorNotDigit').style.display = 'none'
+
+    } else if (/^\d+$/.test(iteration.value)) {
+      iteration = iteration.value
+      document.getElementById('errorNotDigit').style.display = 'none'
+
+      if(iteration>100000){
+        error = true
+        document.getElementById('errorTooBig').style.display = ''
+      }else{
+        document.getElementById('errorTooBig').style.display = 'none'
+      }
+      
+    } else {
+      error = true
+      document.getElementById('errorTooBig').style.display = 'none'
+      document.getElementById('errorNotDigit').style.display = ''
+    }
+
+    
+    
+
+    if (!error) {
+      await this.setState({
+        pagerank: {
+          noIterations: iteration,
+          dampening: this.state.pagerank.dampening
+        }
+      })
+
+      await this.fullPageRank()
+
+      this.handleClose()
+    }
+
   }
   // PAGERANK CONTROLS ///////////////////////
 
@@ -329,7 +374,6 @@ class Home extends React.Component {
   }
 
   handleOpenHyperLink = () => {
-    console.log(this.state.hMatrix)
     this.setState({
       modal: {
         open: true,
@@ -345,6 +389,15 @@ class Home extends React.Component {
       pagerank: {
         noIterations: 0,
         dampening: this.state.pagerank.dampening
+      }
+    })
+  }
+
+  handleOpenJumpToIteration = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'SHOW_JUMP_TO_ITERATION'
       }
     })
   }
@@ -679,7 +732,6 @@ class Home extends React.Component {
 
   render() {
     const { classes } = this.props
-
     var modal = <div></div>
     if (this.state.modal.open) {
       if (this.state.modal.type === 'ADD_NODE') {
@@ -951,6 +1003,128 @@ class Home extends React.Component {
           </Dialog>
         )
       } else if (this.state.modal.type === 'SHOW_HYPERLINK') {
+        var i = 0
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+            classes={{ paperScrollPaper: classes.root }}
+            maxWidth="lg"
+          >
+            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix (a.k.a Google Matrix)'}</DialogTitle>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px', maxWidth: "1500px" }}
+            >
+              <TableContainer>
+                <div style={{ overflow: 'auto', maxHeight: '1000px' }}>
+                  <Table style={{ tableLayout: 'fixed' }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Page/Page</TableCell>
+                        {this.state.nodes.map(node => (
+                          <TableCell align='left'>
+                            <b>{node.id}</b>
+                          </TableCell>
+                        ))}
+
+                      </TableRow>
+                    </TableHead>
+
+                    <TableBody>
+                      {this.state.hMatrix._data.map(row => (
+                        <TableRow>
+                          <TableCell align='left'>
+                            <b>{this.state.nodes[i++].id}</b>
+                          </TableCell>
+
+                          {row.map(page =>
+                            <TableCell align='left'>
+                              {format(round(page, 10), {
+                                fraction: 'decimal'
+                              })}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TableContainer>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Exit
+              </Button>
+            </DialogActions>
+          </Dialog >
+        )
+      } else if (this.state.modal.type === 'SHOW_JUMP_TO_ITERATION') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Jump to Iteration'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px' }}>
+              <TextField
+                id='jumpToIteration'
+                label='Iteration Number'
+                variant='outlined'
+                fullWidth={true}
+                onKeyDown={this.keydown}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNotDigit'
+              >
+                Please specify a number (without any letters or symbols)
+              </span>
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorTooBig'
+              >
+                Sorry, the limit of iterations is 100000...
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                id='confirm'
+                onClick={() => this.jumpToIteration()}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'ADD_LINK') {
         modal = (
           <Dialog
             open={this.state.modal.open}
@@ -959,53 +1133,93 @@ class Home extends React.Component {
             aria-describedby='alert-dialog-description'
             classes={{ paperScrollPaper: classes.root }}
           >
-            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix (a.k.a Google Matrix)'}</DialogTitle>
+            <DialogTitle id='alert-dialog-title'>
+              {'Add a new Link'}
+            </DialogTitle>
             <DialogContent
               className={classes.root}
               style={{ minWidth: '500px' }}
             >
-              <TableContainer>
-                <Table aria-label='simple table'>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell align='left'>PP</TableCell>
-                      {this.state.nodes.map(node => (
-                        <TableCell align='left'>
-                          <b>{node.id}</b>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                </Table>
-                <Table aria-label='simple table'>
-                  <div style={{ overflow: 'auto', maxHeight: '340px' }}>
-                    <Table style={{ tableLayout: 'fixed' }}>
-                      <TableBody>
-                        {this.state.hMatrix._data.map(row => (
-                          <TableRow>
-                            <TableCell align='left'>
-                              <b>{this.state.nodes[0].id}</b>
-                            </TableCell>
+              <h4 style={{ color: '#999' }}>From page...</h4>
+              <Select
+                className='basic-single'
+                classNamePrefix='select'
+                placeholder='Starting Page'
+                isClearable={true}
+                isSearchable={true}
+                options={this.state.selects.nodes}
+                onChange={this.changeNewFromPage}
+                value={this.state.newLink.from || ''}
+              />
+            </DialogContent>
 
-                            {row.map(page =>
-                              <TableCell align='left'>
-                                {format(round(page, 10), {
-                                  fraction: 'decimal'
-                                })}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </Table>
-              </TableContainer>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <h4 style={{ color: '#999' }}>To page...</h4>
+
+              <Select
+                className='basic-single'
+                classNamePrefix='select'
+                placeholder='End Page'
+                isClearable={true}
+                isSearchable={true}
+                options={this.state.selects.nodes}
+                onChange={this.changeNewToPage}
+                value={this.state.newLink.to || ''}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNoLink'
+              >
+                Please both the start and end node!
+              </span>
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorLinkAlreadyExists'
+              >
+                Sorry, there already exists a link between those two pages!
+              </span>
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorLinkSameNode'
+              >
+                Sorry, the start and end page must be different!
+              </span>
             </DialogContent>
 
             <DialogActions>
               <Button onClick={() => this.handleClose()} color='secondary'>
                 Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                onClick={() => this.addNewLink()}
+              >
+                Confirm
               </Button>
             </DialogActions>
           </Dialog>
@@ -1099,7 +1313,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAdd()}
+                    onClick={() => this.handleOpenJumpToIteration()}
                   >
                     Jump to Iteration
                   </Button>
