@@ -46,7 +46,7 @@ import {
 const styles = theme => ({ root: { overflow: 'visible' } })
 
 class Home extends React.Component {
-  Home () {}
+  Home() { }
 
   state = {
     nodes: [
@@ -145,15 +145,17 @@ class Home extends React.Component {
 
     pageRankValues: [],
 
-    hMatrix: null
+    hMatrix: null,
+
+    showPageRank: false
   }
 
-  componentDidMount () {
+  componentDidMount() {
     this.fullPageRank()
   }
 
   // PAGERANK COMPUTATIONS ///////////////////////
-  async fullPageRank () {
+  async fullPageRank() {
     var start = []
     var initialVal = fraction(1, this.state.nodes.length)
 
@@ -204,7 +206,7 @@ class Home extends React.Component {
     console.log(format(allNodes, { fraction: 'decimal' }))
   }
 
-  async computeHyperLinkMatrix (allNodes) {
+  async computeHyperLinkMatrix(allNodes) {
     var comp = this.state.nodes.length
     var hMatrix = matrix(zeros([comp, comp]))
 
@@ -322,6 +324,27 @@ class Home extends React.Component {
       modal: {
         open: true,
         type: 'REMOVE_NODE'
+      }
+    })
+  }
+
+  handleOpenHyperLink = () => {
+    console.log(this.state.hMatrix)
+    this.setState({
+      modal: {
+        open: true,
+        type: 'SHOW_HYPERLINK'
+      }
+    })
+  }
+
+  handleShowHidePageRank = () => {
+    var show = this.state.showPageRank
+    this.setState({
+      showPageRank: !show,
+      pagerank: {
+        noIterations: 0,
+        dampening: this.state.pagerank.dampening
       }
     })
   }
@@ -644,7 +667,17 @@ class Home extends React.Component {
 
   // GRAPH CONTROLS ///////////////////////
 
-  render () {
+  keydown(e) {
+    if (e.keyCode == 13) {
+      try {
+        document.getElementById('confirm').click()
+      } catch (error) {
+        console.log()
+      }
+    }
+  }
+
+  render() {
     const { classes } = this.props
 
     var modal = <div></div>
@@ -661,14 +694,13 @@ class Home extends React.Component {
               {'Add a new Page'}
             </DialogTitle>
             <DialogContent style={{ minWidth: '500px' }}>
-              <form autoComplete='off'>
-                <TextField
-                  id='newNodeName'
-                  label='Page Name'
-                  variant='outlined'
-                  fullWidth={true}
-                />
-              </form>
+              <TextField
+                id='newNodeName'
+                label='Page Name'
+                variant='outlined'
+                fullWidth={true}
+                onKeyDown={this.keydown}
+              />
             </DialogContent>
 
             <DialogContent>
@@ -704,6 +736,7 @@ class Home extends React.Component {
               <Button
                 variant='outlined'
                 color='primary'
+                id='confirm'
                 onClick={() => this.addNewNode()}
               >
                 Confirm
@@ -917,12 +950,228 @@ class Home extends React.Component {
             </DialogActions>
           </Dialog>
         )
+      } else if (this.state.modal.type === 'SHOW_HYPERLINK') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+            classes={{ paperScrollPaper: classes.root }}
+          >
+            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix (a.k.a Google Matrix)'}</DialogTitle>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <TableContainer>
+                <Table aria-label='simple table'>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align='left'>PP</TableCell>
+                      {this.state.nodes.map(node => (
+                        <TableCell align='left'>
+                          <b>{node.id}</b>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                </Table>
+                <Table aria-label='simple table'>
+                  <div style={{ overflow: 'auto', maxHeight: '340px' }}>
+                    <Table style={{ tableLayout: 'fixed' }}>
+                      <TableBody>
+                        {this.state.hMatrix._data.map(row => (
+                          <TableRow>
+                            <TableCell align='left'>
+                              <b>{this.state.nodes[0].id}</b>
+                            </TableCell>
+
+                            {row.map(page =>
+                              <TableCell align='left'>
+                                {format(round(page, 10), {
+                                  fraction: 'decimal'
+                                })}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Table>
+              </TableContainer>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
       }
     }
 
     var backIteration = 'none'
     if (this.state.pagerank.noIterations > 0) {
       backIteration = ''
+    }
+
+    var showPageRank = 'Show'
+    var pagerank = null
+    if (this.state.showPageRank) {
+      showPageRank = 'Hide'
+      pagerank = (
+        <div style={{ position: 'fixed', top: '25px', right: '25px' }}>
+          <Card style={{ width: '500px' }}>
+            <CardContent>
+              <h2 style={{ color: '#38393b' }}>PageRank</h2>
+
+              <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
+
+              <Grid container spacing={2} >
+                <Grid item md={12}>
+                  <h4 style={{ color: '#999' }}>
+                    <i
+                      class='fas fa-chevron-left fa-lg'
+                      style={{
+                        marginRight: '10px',
+                        color: '#3f51b5',
+                        cursor: 'pointer',
+                        display: backIteration
+                      }}
+                      onClick={() => this.decreaseIteration()}
+                    ></i>
+                    Iteration {this.state.pagerank.noIterations}
+                    <i
+                      class='fas fa-chevron-right fa-lg'
+                      style={{
+                        marginLeft: '10px',
+                        color: '#3f51b5',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => this.increaseIteration()}
+                    ></i>
+                  </h4>
+                  <TableContainer>
+                    <Table aria-label='simple table'>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Page</TableCell>
+                          <TableCell align='left'>Ingoing Links</TableCell>
+                          <TableCell align='left'>Outgoing Links</TableCell>
+                          <TableCell align='left'>PageRank</TableCell>
+                        </TableRow>
+                      </TableHead>
+                    </Table>
+                    <Table aria-label='simple table'>
+                      <div style={{ overflow: 'auto', maxHeight: '340px' }}>
+                        <Table style={{ tableLayout: 'fixed' }}>
+                          <TableBody>
+                            {this.state.pageRankValues.map(pagerank => (
+                              <TableRow key={pagerank.id}>
+                                <TableCell align='left'>
+                                  <b>{pagerank.id}</b>
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {pagerank.ingoing}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {pagerank.outgoing}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {format(round(pagerank.pr, 10), {
+                                    fraction: 'decimal'
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleOpenAdd()}
+                  >
+                    Jump to Iteration
+                  </Button>
+                </Grid>
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleOpenAdd()}
+                  >
+                    Jump to Stabilization
+                  </Button>
+                </Grid>
+              </Grid>
+
+              <hr
+                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+              ></hr>
+
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.pagerank.noIterations})</span></h4>
+
+              <Grid container spacing={2} style={{ marginTop: '20px' }}>
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    size='medium'
+                    style={{ width: '100%', fontSize: '12px', height: '100%' }}
+                  >
+                    Pick Starting Node
+                  </Button>
+                </Grid>
+
+                <Grid item md={3}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    size='medium'
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    Jump
+                  </Button>
+                </Grid>
+
+                <Grid item md={3}>
+                  <Button
+                    variant='outlined'
+                    color='secondary'
+                    size='medium'
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    Stop
+                  </Button>
+                </Grid>
+              </Grid>
+
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' />}
+                  label='Solve Dead Ends'
+                />
+
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' />}
+                  label='Solve Spider Traps'
+                />
+              </FormGroup>
+            </CardContent>
+          </Card>
+        </div>
+      )
     }
 
     return (
@@ -1006,59 +1255,6 @@ class Home extends React.Component {
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Random Surfer</h4>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    size='medium'
-                    style={{ width: '100%', fontSize: '12px', height: '100%' }}
-                  >
-                    Pick Starting Node
-                  </Button>
-                </Grid>
-
-                <Grid item md={3}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    size='medium'
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <i class='fas fa-play'></i>
-                  </Button>
-                </Grid>
-
-                <Grid item md={3}>
-                  <Button
-                    variant='outlined'
-                    color='secondary'
-                    size='medium'
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <i class='fas fa-trash'></i>
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <FormGroup row style={{ marginTop: '20px' }}>
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
-                  label='Solve Dead Ends'
-                />
-
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
-                  label='Solve Spider Traps'
-                />
-              </FormGroup>
-
-              <hr
-                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
-              ></hr>
-
               <h4 style={{ color: '#999' }}>PageRank</h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
@@ -1067,8 +1263,9 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
+                    onClick={() => this.handleShowHidePageRank()}
                   >
-                    Table View
+                    {showPageRank} Pagerank
                   </Button>
                 </Grid>
                 <Grid item md={6}>
@@ -1076,6 +1273,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
+                    onClick={() => this.handleOpenHyperLink()}
                   >
                     Hyperlink Matrix
                   </Button>
@@ -1097,105 +1295,7 @@ class Home extends React.Component {
           </Card>
         </div>
 
-        <div style={{ position: 'fixed', top: '25px', right: '25px' }}>
-          <Card style={{ width: '550px' }}>
-            <CardContent>
-              <h2 style={{ color: '#38393b' }}>PageRank</h2>
-
-              <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={12}>
-                  <h4 style={{ color: '#999' }}>
-                    <i
-                      class='fas fa-chevron-left fa-lg'
-                      style={{
-                        marginRight: '10px',
-                        color: '#3f51b5',
-                        cursor: 'pointer',
-                        display: backIteration
-                      }}
-                      onClick={() => this.decreaseIteration()}
-                    ></i>
-                    Iteration {this.state.pagerank.noIterations}
-                    <i
-                      class='fas fa-chevron-right fa-lg'
-                      style={{
-                        marginLeft: '10px',
-                        color: '#3f51b5',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => this.increaseIteration()}
-                    ></i>
-                  </h4>
-                  <TableContainer>
-                    <Table aria-label='simple table'>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Page</TableCell>
-                          <TableCell align='left'>Ingoing Links</TableCell>
-                          <TableCell align='left'>Outgoing Links</TableCell>
-                          <TableCell align='left'>PageRank</TableCell>
-                        </TableRow>
-                      </TableHead>
-                    </Table>
-                    <Table aria-label='simple table'>
-                      <div style={{ overflow: 'auto', height: '316px' }}>
-                        <Table style={{ tableLayout: 'fixed' }}>
-                          <TableBody>
-                            {this.state.pageRankValues.map(pagerank => (
-                              <TableRow key={pagerank.id}>
-                                <TableCell align='left'>
-                                  <b>{pagerank.id}</b>
-                                </TableCell>
-                                <TableCell align='left'>
-                                  {pagerank.ingoing}
-                                </TableCell>
-                                <TableCell align='left'>
-                                  {pagerank.outgoing}
-                                </TableCell>
-                                <TableCell align='left'>
-                                  {format(round(pagerank.pr, 12), {
-                                    fraction: 'decimal'
-                                  })}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </Table>
-                  </TableContainer>
-                </Grid>
-
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAdd()}
-                  >
-                    Jump to Iteration
-                  </Button>
-                </Grid>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAdd()}
-                  >
-                    Jump to Stabilization
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <hr
-                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
-              ></hr>
-            </CardContent>
-          </Card>
-        </div>
+        {pagerank}
 
         {modal}
       </div>
