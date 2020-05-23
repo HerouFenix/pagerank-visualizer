@@ -144,7 +144,7 @@ class Home extends React.Component {
     pagerank: {
       dampening: 0.85,
       noIterations: 0,
-      tolerance: 0.00000000001
+      tolerance: 0.0000000001
     },
 
     pageRankValues: [],
@@ -245,8 +245,7 @@ class Home extends React.Component {
     var iteration = 0
     for (iteration; iteration < 100000; iteration++) {
       var nextValArray = multiply(transpose(curValArray), this.state.hMatrix)
-      
-      
+       
       var converged = true
       for(var j = 0 ; j < nextValArray._data.length ; j++){
         var next = format(nextValArray._data[j], { fraction: 'decimal' })
@@ -258,6 +257,7 @@ class Home extends React.Component {
       }
       if (converged) {
         curValArray = nextValArray
+        iteration++
         break
       }
 
