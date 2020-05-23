@@ -76,9 +76,12 @@ class Home extends React.Component {
       ],
       edges: [
         { value: 'P1 P2', label: 'P1 -> P2' },
-        { value: 'P1 P3', label: 'P1 -> P3' },
-        { value: 'P2 P4', label: 'P2 -> P4' },
-        { value: 'P2 P5', label: 'P2 -> P5' }
+        { value: 'P2 P1', label: 'P2 -> P1' },
+        { value: 'P2 P5', label: 'P2 -> P5' },
+        { value: 'P3 P2', label: 'P3 -> P2' },
+        { value: 'P4 P2', label: 'P4 -> P2' },
+        { value: 'P4 P5', label: 'P4 -> P5' },
+        { value: 'P5 P3', label: 'P5 -> P3' },
       ]
     },
 
@@ -140,14 +143,15 @@ class Home extends React.Component {
 
     pagerank: {
       dampening: 0.85,
-      noIterations: 0
+      noIterations: 0,
+      tolerance: 0.00000000001
     },
 
     pageRankValues: [],
 
     hMatrix: null,
 
-    showPageRank: false
+    showPageRank: false,
   }
 
   componentDidMount() {
@@ -201,6 +205,79 @@ class Home extends React.Component {
 
     await this.setState({
       pageRankValues: allNodes
+    })
+
+    console.log(format(allNodes, { fraction: 'decimal' }))
+  }
+
+  pageRankToStabilization = async () =>{
+    var start = []
+    var initialVal = fraction(1, this.state.nodes.length)
+
+    // Compute initial vector
+    for (let node of this.state.nodes) {
+      start.push({ node: node.id, pr: initialVal })
+    }
+    var allNodes = []
+    var i = 0
+    for (let node of this.state.nodes) {
+      allNodes.push({
+        id: node.id,
+        index: i,
+        pr: initialVal,
+        ingoing: 0,
+        outgoing: 0
+      })
+      i++
+    }
+
+    // Compute Hyperlink Matrix
+    await this.computeHyperLinkMatrix(allNodes)
+    //console.log(format(this.state.hMatrix, { fraction: 'decimal' }))
+
+    // Compute iterations
+    var curValArray = []
+    for (let node of allNodes) {
+      curValArray.push(node.pr)
+    }
+    curValArray = matrix(curValArray)
+
+    var iteration = 0
+    for (iteration; iteration < 100000; iteration++) {
+      var nextValArray = multiply(transpose(curValArray), this.state.hMatrix)
+      
+      
+      var converged = true
+      for(var j = 0 ; j < nextValArray._data.length ; j++){
+        var next = format(nextValArray._data[j], { fraction: 'decimal' })
+        var cur = format(curValArray._data[j], { fraction: 'decimal' })
+        if(next - cur > this.state.pagerank.tolerance){
+          converged = false
+          break
+        }
+      }
+      if (converged) {
+        curValArray = nextValArray
+        break
+      }
+
+      curValArray = nextValArray
+    }
+
+    // Update Values
+    for (var j = 0; j < allNodes.length; j++) {
+      allNodes.find(function (n, index) {
+        if (n.index == j) return true
+      }).pr = curValArray._data[j]
+    }
+
+    await this.setState({
+      pageRankValues: allNodes,
+      pagerank: {
+        noIterations: iteration,
+        dampening: this.state.pagerank.dampening,
+        tolerance: this.state.pagerank.tolerance
+      }
     })
 
     console.log(format(allNodes, { fraction: 'decimal' }))
@@ -270,7 +347,8 @@ class Home extends React.Component {
     await this.setState({
       pagerank: {
         noIterations: noIterations,
-        dampening: this.state.pagerank.dampening
+        dampening: this.state.pagerank.dampening,
+        tolerance: this.state.pagerank.tolerance
       }
     })
 
@@ -283,7 +361,8 @@ class Home extends React.Component {
     await this.setState({
       pagerank: {
         noIterations: noIterations,
-        dampening: this.state.pagerank.dampening
+        dampening: this.state.pagerank.dampening,
+        tolerance: this.state.pagerank.tolerance
       }
     })
 
@@ -304,27 +383,28 @@ class Home extends React.Component {
       iteration = iteration.value
       document.getElementById('errorNotDigit').style.display = 'none'
 
-      if(iteration>100000){
+      if (iteration > 100000) {
         error = true
         document.getElementById('errorTooBig').style.display = ''
-      }else{
+      } else {
         document.getElementById('errorTooBig').style.display = 'none'
       }
-      
+
     } else {
       error = true
       document.getElementById('errorTooBig').style.display = 'none'
       document.getElementById('errorNotDigit').style.display = ''
     }
 
-    
-    
+
+
 
     if (!error) {
       await this.setState({
         pagerank: {
           noIterations: iteration,
-          dampening: this.state.pagerank.dampening
+          dampening: this.state.pagerank.dampening,
+          tolerance: this.state.pagerank.tolerance
         }
       })
 
@@ -388,7 +468,8 @@ class Home extends React.Component {
       showPageRank: !show,
       pagerank: {
         noIterations: 0,
-        dampening: this.state.pagerank.dampening
+        dampening: this.state.pagerank.dampening,
+        tolerance: this.state.pagerank.tolerance
       }
     })
   }
@@ -1323,7 +1404,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAdd()}
+                    onClick={() => this.pageRankToStabilization()}
                   >
                     Jump to Stabilization
                   </Button>
