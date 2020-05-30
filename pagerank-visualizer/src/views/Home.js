@@ -40,7 +40,9 @@ import {
   subset,
   multiply,
   transpose,
-  round
+  round,
+  ones,
+  add
 } from 'mathjs'
 
 const styles = theme => ({ root: { overflow: 'visible' } })
@@ -144,8 +146,12 @@ class Home extends React.Component {
     pagerank: {
       dampening: 0.85,
       noIterations: 0,
-      tolerance: 0.0000000001
+      tolerance: 0.00000000001
     },
+
+    solveDeadEnds: false,
+
+    solveSpiderTraps: false,
 
     pageRankValues: [],
 
@@ -155,11 +161,11 @@ class Home extends React.Component {
   }
 
   componentDidMount() {
-    this.fullPageRank()
+    this.fullPageRank(true)
   }
 
   // PAGERANK COMPUTATIONS ///////////////////////
-  async fullPageRank() {
+  async fullPageRank(newHMatrix) {
     var start = []
     var initialVal = fraction(1, this.state.nodes.length)
 
@@ -181,7 +187,9 @@ class Home extends React.Component {
     }
 
     // Compute Hyperlink Matrix
-    await this.computeHyperLinkMatrix(allNodes)
+    if(newHMatrix || true){
+      await this.computeHyperLinkMatrix(allNodes)
+    }
     //console.log(format(this.state.hMatrix, { fraction: 'decimal' }))
 
     // Compute iterations
@@ -210,7 +218,7 @@ class Home extends React.Component {
     console.log(format(allNodes, { fraction: 'decimal' }))
   }
 
-  pageRankToStabilization = async () =>{
+  pageRankToStabilization = async () => {
     var start = []
     var initialVal = fraction(1, this.state.nodes.length)
 
@@ -245,12 +253,12 @@ class Home extends React.Component {
     var iteration = 0
     for (iteration; iteration < 100000; iteration++) {
       var nextValArray = multiply(transpose(curValArray), this.state.hMatrix)
-       
+
       var converged = true
-      for(var j = 0 ; j < nextValArray._data.length ; j++){
+      for (var j = 0; j < nextValArray._data.length; j++) {
         var next = format(nextValArray._data[j], { fraction: 'decimal' })
         var cur = format(curValArray._data[j], { fraction: 'decimal' })
-        if(next - cur > this.state.pagerank.tolerance){
+        if (next - cur > this.state.pagerank.tolerance) {
           converged = false
           break
         }
@@ -337,7 +345,68 @@ class Home extends React.Component {
     await this.setState({
       hMatrix: hMatrix
     })
+
+    // If solve dead ends
+    if (this.state.solveDeadEnds) {
+      this.solveDeadEnds()
+    }
+
+    // If solve spider traps
+    if (this.state.solveSpiderTraps) {
+      this.solveSpiderTraps()
+    }
   }
+
+  async solveDeadEnds() {
+    var initialVal = fraction(1, this.state.nodes.length)
+
+    // 1xN vector of 1s
+    var onesArray = ones(1, this.state.nodes.length)
+
+    // Nx1 vector of 1 for dangling nodes, 0 for the others
+    var danglers = zeros(this.state.nodes.length, 1)
+
+    for (var i = 0; i < this.state.nodes.length; i++) {
+      var rowZeros = true
+      for (var j = 0; j < this.state.nodes.length; j++) {
+        if (this.state.hMatrix.subset(index(i, j)) != 0) {
+          rowZeros = false
+          break
+        }
+      }
+
+      if (rowZeros) {
+        danglers.subset(index(i, 0), 1)
+      }
+    }
+
+    var multi = multiply(danglers, onesArray)
+
+    var dankHMatrix = multiply(initialVal, multi)
+
+    var finalMatrix = add(this.state.hMatrix, dankHMatrix)
+    await this.setState({
+      hMatrix: finalMatrix
+    })
+  }
+
+  async solveSpiderTraps() {
+    var initialVal = fraction(1, this.state.nodes.length)
+
+    // 1xN vector of 1s
+    var randomJump = multiply(initialVal,ones(this.state.nodes.length, this.state.nodes.length))
+
+    var continuing = multiply(this.state.pagerank.dampening, this.state.hMatrix)
+
+    var jumpProb = fraction(1-this.state.pagerank.dampening)
+    randomJump = multiply(jumpProb, randomJump)
+
+    var finalMatrix = add(continuing, randomJump)
+    await this.setState({
+      hMatrix: finalMatrix
+    })
+  }
+
   // PAGERANK COMPUTATIONS ///////////////////////
 
   // PAGERANK CONTROLS ///////////////////////
@@ -352,7 +421,7 @@ class Home extends React.Component {
       }
     })
 
-    this.fullPageRank()
+    this.fullPageRank(false)
   }
 
   decreaseIteration = async () => {
@@ -366,7 +435,7 @@ class Home extends React.Component {
       }
     })
 
-    this.fullPageRank()
+    this.fullPageRank(false)
   }
 
   jumpToIteration = async () => {
@@ -408,7 +477,7 @@ class Home extends React.Component {
         }
       })
 
-      await this.fullPageRank()
+      await this.fullPageRank(false)
 
       this.handleClose()
     }
@@ -537,6 +606,24 @@ class Home extends React.Component {
 
   // SELECT CONTROLS ///////////////////////
 
+
+  // CHECK CONTROLS ///////////////////////
+  changeSolveDeadEnds = async () => {
+    var current = this.state.solveDeadEnds
+    await this.setState({ solveDeadEnds: !current })
+    this.fullPageRank(true)
+
+  }
+
+  changeSolveSpiderTraps = async () => {
+    var current = this.state.solveSpiderTraps
+    await this.setState({ solveSpiderTraps: !current })
+    this.fullPageRank(true)
+
+  }
+  // CHECK CONTROLS ///////////////////////
+
+
   // GRAPH CONTROLS ///////////////////////
   addNewNode = async () => {
     var error = false
@@ -591,7 +678,7 @@ class Home extends React.Component {
         }
       })
 
-      this.fullPageRank()
+      this.fullPageRank(true)
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -661,7 +748,7 @@ class Home extends React.Component {
         }
       })
 
-      this.fullPageRank()
+      this.fullPageRank(true)
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -717,7 +804,7 @@ class Home extends React.Component {
         deleteLink: null
       })
 
-      this.fullPageRank()
+      this.fullPageRank(true)
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -790,7 +877,7 @@ class Home extends React.Component {
         deletePage: null
       })
 
-      this.fullPageRank()
+      this.fullPageRank(true)
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -1454,12 +1541,12 @@ class Home extends React.Component {
 
               <FormGroup row style={{ marginTop: '20px' }}>
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
+                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()}/>}
                   label='Solve Dead Ends'
                 />
 
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
+                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()}/>}
                   label='Solve Spider Traps'
                 />
               </FormGroup>
