@@ -642,7 +642,7 @@ class Home extends React.Component {
     var winner = await this.getRandomNode()
 
     if (winner == null) {
-      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps there\'s a really nasty DeadEnd or no available nodes for the surfer to jump to! Change the network configuration, manually jump to the node you wish to visit or try again!', {
+      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps the surfer\'s reached a Dead End and has nowhere to jump to! Change the network configuration, manually jump to the node you wish to visit or try again!', {
         position: "top-right",
         autoClose: 7500,
         hideProgressBar: false,
@@ -1079,12 +1079,12 @@ class Home extends React.Component {
         } else {
           oldId = this.state.jumpPage.value
         }
-  
-        if(page == oldId){
-          await this.setState({jumpPage: null})
+
+        if (page == oldId) {
+          await this.setState({ jumpPage: null })
         }
       }
-  
+
       await this.setState({ jump: 0, jumpPage: null })
 
       await this.setState({
@@ -1966,17 +1966,43 @@ class Home extends React.Component {
                 </Grid>
               </Grid>
 
-              <FormGroup row style={{ marginTop: '20px' }}>
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
-                  label='Show Dead Ends'
-                />
+              <hr
+                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+              ></hr>
 
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' />}
-                  label='Show Spider Traps'
-                />
-              </FormGroup>
+              <h4 style={{ color: '#999' }}>Page Quality</h4>
+
+              <Grid container spacing={2} style={{ marginTop: '20px' }}>
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleShowHidePageRank()}
+                  >
+                    Tweak Quality
+                  </Button>
+                </Grid>
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleOpenHyperLink()}
+                  >
+                    Show Quality
+                  </Button>
+                </Grid>
+
+                <Grid item md={12}>
+                  <FormGroup row>
+                    <FormControlLabel
+                      control={<Checkbox name='checkedQ' value={this.state.disconnectedJumps} checked={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
+                      label='Enable Quality Influence'
+                    />
+                  </FormGroup>
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
         </div>
