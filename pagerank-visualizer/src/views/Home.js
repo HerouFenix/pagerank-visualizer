@@ -505,9 +505,14 @@ class Home extends React.Component {
         oldId = this.state.jumpPage.value
       }
 
-      this.state.graphRef.clustering.updateClusteredNode(oldId, {
-        color: null
-      })
+      try {
+        this.state.graphRef.clustering.updateClusteredNode(oldId, {
+          color: null
+        })
+      } catch (e) {
+
+      }
+
     }
 
     var nodeId = null
@@ -531,8 +536,8 @@ class Home extends React.Component {
       },
     })
 
-    if(!randomJump){
-      await this.setState({jump: 1})
+    if (!randomJump) {
+      await this.setState({ jump: 1 })
     }
 
     if (!randomJump) {
@@ -561,8 +566,7 @@ class Home extends React.Component {
     await this.setState({ jump: 0, jumpPage: null })
   }
 
-  randomJump = async () => {
-
+  async getRandomNode() {
     function compare(a, b) {
       if (a.pr < b.pr) {
         return -1;
@@ -576,14 +580,14 @@ class Home extends React.Component {
     var pageRankValues = [...this.state.pageRankValues];
     pageRankValues = pageRankValues.sort(compare)
 
-
-    for (var attempt = 0; attempt < 10000; attempt++) {
+    for (var attempt = 0; attempt < 500; attempt++) {
+      console.log(attempt)
       var randomNumber = Math.random()
       var threshold = 0;
       var winner = null
 
       for (let i = 0; i < pageRankValues.length; i++) {
-        threshold += parseFloat(pageRankValues[i].pr);
+        threshold += pageRankValues[i].pr;
         if (threshold > randomNumber) {
           winner = pageRankValues[i]
           break
@@ -599,7 +603,8 @@ class Home extends React.Component {
         }
 
         // Treat disconnected jumps
-        if (this.state.jumpPage != null && !this.state.disconnectedJumps) { //
+        if (this.state.jumpPage != null && !this.state.disconnectedJumps) {
+          console.log("Verifying Edge Exists")
           var containsLink = false
           var id
           if (this.state.jumpPage.id != null && this.state.jumpPage.id != undefined) {
@@ -617,20 +622,29 @@ class Home extends React.Component {
           }
 
           if (!containsLink) {
+            console.log("Edge does not exist")
             violation = true
           }
         }
 
         if (!violation) {
-          break
+          return winner
         }
       }
     }
 
+    return null
+  }
+
+  randomJump = async () => {
+
+
+    var winner = await this.getRandomNode()
+
     if (winner == null) {
-      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps there\'s a really nasty DeadEnd or no available nodes for the surfer to jump to!', {
+      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps there\'s a really nasty DeadEnd or no available nodes for the surfer to jump to! Change the network configuration, manually jump to the node you wish to visit or try again!', {
         position: "top-right",
-        autoClose: 5000,
+        autoClose: 7500,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -1057,6 +1071,21 @@ class Home extends React.Component {
           selectNewLinks.push(relation)
         }
       }
+
+      if (this.state.jumpPage != null) {
+        var oldId = null
+        if (this.state.jumpPage.id != null && this.state.jumpPage.id != undefined) {
+          oldId = this.state.jumpPage.id
+        } else {
+          oldId = this.state.jumpPage.value
+        }
+  
+        if(page == oldId){
+          await this.setState({jumpPage: null})
+        }
+      }
+  
+      await this.setState({ jump: 0, jumpPage: null })
 
       await this.setState({
         nodes: newPages,
@@ -1744,12 +1773,12 @@ class Home extends React.Component {
 
               <FormGroup row style={{ marginTop: '20px' }}>
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
+                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} checked={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
                   label='Solve Dead Ends'
                 />
 
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
+                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} checked={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
                   label='Solve Spider Traps'
                 />
               </FormGroup>
@@ -1804,12 +1833,12 @@ class Home extends React.Component {
 
               <FormGroup row style={{ marginTop: '20px' }}>
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
+                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumps} checked={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
                   label='Disconnected jumps'
                 />
 
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.samePageJumps} onChange={() => this.changeSamePageJumps()} />}
+                  control={<Checkbox name='checkedA' value={this.state.samePageJumps} checked={this.state.samePageJumps} onChange={() => this.changeSamePageJumps()} />}
                   label='Jumps to same Page'
                 />
               </FormGroup>
