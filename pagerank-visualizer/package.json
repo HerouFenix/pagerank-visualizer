@@ -18,6 +18,7 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "3.4.1",
     "react-select": "^3.1.0",
+    "react-toastify": "^6.0.5",
     "vis-network": "^7.6.7",
     "vis-react": "^0.5.1"
   },

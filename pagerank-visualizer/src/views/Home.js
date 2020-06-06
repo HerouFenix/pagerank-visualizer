@@ -28,6 +28,9 @@ import FormControlLabel from '@material-ui/core/FormControlLabel'
 import TextField from '@material-ui/core/TextField'
 import { withStyles } from '@material-ui/styles'
 
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import Button from '@material-ui/core/Button'
 
 import {
@@ -150,14 +153,19 @@ class Home extends React.Component {
     },
 
     solveDeadEnds: false,
-
     solveSpiderTraps: false,
+    disconnectedJumps: false,
+    samePageJumps: false,
 
     pageRankValues: [],
 
     hMatrix: null,
 
     showPageRank: false,
+
+    jump: 0,
+    jumpPage: null,
+    jumpPageSelect: null
   }
 
   componentDidMount() {
@@ -187,7 +195,7 @@ class Home extends React.Component {
     }
 
     // Compute Hyperlink Matrix
-    if(newHMatrix || true){
+    if (newHMatrix || true) {
       await this.computeHyperLinkMatrix(allNodes)
     }
     //console.log(format(this.state.hMatrix, { fraction: 'decimal' }))
@@ -394,11 +402,11 @@ class Home extends React.Component {
     var initialVal = fraction(1, this.state.nodes.length)
 
     // 1xN vector of 1s
-    var randomJump = multiply(initialVal,ones(this.state.nodes.length, this.state.nodes.length))
+    var randomJump = multiply(initialVal, ones(this.state.nodes.length, this.state.nodes.length))
 
     var continuing = multiply(this.state.pagerank.dampening, this.state.hMatrix)
 
-    var jumpProb = fraction(1-this.state.pagerank.dampening)
+    var jumpProb = fraction(1 - this.state.pagerank.dampening)
     randomJump = multiply(jumpProb, randomJump)
 
     var finalMatrix = add(continuing, randomJump)
@@ -485,6 +493,161 @@ class Home extends React.Component {
   }
   // PAGERANK CONTROLS ///////////////////////
 
+
+  // SURFER CONTROLS ///////////////////////
+  jumpToNode = async (randomJump, newNode) => {
+
+    if (this.state.jumpPage != null) {
+      var oldId = null
+      if (this.state.jumpPage.id != null && this.state.jumpPage.id != undefined) {
+        oldId = this.state.jumpPage.id
+      } else {
+        oldId = this.state.jumpPage.value
+      }
+
+      this.state.graphRef.clustering.updateClusteredNode(oldId, {
+        color: null
+      })
+    }
+
+    var nodeId = null
+    if (randomJump) {
+      nodeId = newNode.id
+    } else {
+      nodeId = newNode.value
+    }
+
+    await this.setState({ jumpPage: newNode })
+    this.state.graphRef.clustering.updateClusteredNode(nodeId, {
+      color: {
+        border: '#f50057',
+        background: '#fa7faa',
+      }
+    })
+    this.state.graphRef.focus(nodeId, {
+      animation: {
+        duration: 100,
+        easingFunction: 'linear'
+      },
+    })
+
+    if(!randomJump){
+      await this.setState({jump: 1})
+    }
+
+    if (!randomJump) {
+      this.handleClose()
+    }
+  }
+
+  stop = async () => {
+    if (this.state.jumpPage != null) {
+      var oldId = null
+      if (this.state.jumpPage.id != null && this.state.jumpPage.id != undefined) {
+        oldId = this.state.jumpPage.id
+      } else {
+        oldId = this.state.jumpPage.value
+      }
+
+      try {
+        this.state.graphRef.clustering.updateClusteredNode(oldId, {
+          color: null
+        })
+      } catch (e) {
+
+      }
+    }
+
+    await this.setState({ jump: 0, jumpPage: null })
+  }
+
+  randomJump = async () => {
+
+    function compare(a, b) {
+      if (a.pr < b.pr) {
+        return -1;
+      }
+      if (a.pr > b.pr) {
+        return 1;
+      }
+      return 0;
+    }
+
+    var pageRankValues = [...this.state.pageRankValues];
+    pageRankValues = pageRankValues.sort(compare)
+
+
+    for (var attempt = 0; attempt < 10000; attempt++) {
+      var randomNumber = Math.random()
+      var threshold = 0;
+      var winner = null
+
+      for (let i = 0; i < pageRankValues.length; i++) {
+        threshold += parseFloat(pageRankValues[i].pr);
+        if (threshold > randomNumber) {
+          winner = pageRankValues[i]
+          break
+        }
+      }
+
+      if (winner != null) {
+        var violation = false
+
+        // Treat same page jumps
+        if (this.state.jumpPage != null && (winner.id == this.state.jumpPage.id || winner.id == this.state.jumpPage.value) && !this.state.samePageJumps) {
+          violation = true
+        }
+
+        // Treat disconnected jumps
+        if (this.state.jumpPage != null && !this.state.disconnectedJumps) { //
+          var containsLink = false
+          var id
+          if (this.state.jumpPage.id != null && this.state.jumpPage.id != undefined) {
+            id = this.state.jumpPage.id
+          } else {
+            id = this.state.jumpPage.value
+          }
+
+          for (let relation of this.state.edges) {
+            if (relation.from == id && relation.to == winner.id) {
+              console.log(relation)
+              containsLink = true
+              break
+            }
+          }
+
+          if (!containsLink) {
+            violation = true
+          }
+        }
+
+        if (!violation) {
+          break
+        }
+      }
+    }
+
+    if (winner == null) {
+      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps there\'s a really nasty DeadEnd or no available nodes for the surfer to jump to!', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
+    } else {
+      var curJump = this.state.jump
+      curJump++
+
+      await this.setState({ jump: curJump })
+
+      await this.jumpToNode(true, winner)
+    }
+  }
+  // SURFER CONTROLS ///////////////////////
+
+
   // MODAL CONTROLS ///////////////////////
   handleOpenAdd = () => {
     this.setState({
@@ -552,8 +715,19 @@ class Home extends React.Component {
     })
   }
 
+  handleOpenJumpTo = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'JUMP_TO'
+      }
+    })
+  }
+
+
   handleClose = () => {
     this.setState({
+      jumpPageSelect: null,
       modal: {
         open: false,
         type: null
@@ -604,6 +778,14 @@ class Home extends React.Component {
     }
   }
 
+  changeJumpNode = async selectedOption => {
+    if (selectedOption != null) {
+      await this.setState({ jumpPageSelect: selectedOption })
+    } else {
+      await this.setState({ jumpPageSelect: null })
+    }
+  }
+
   // SELECT CONTROLS ///////////////////////
 
 
@@ -612,7 +794,6 @@ class Home extends React.Component {
     var current = this.state.solveDeadEnds
     await this.setState({ solveDeadEnds: !current })
     this.fullPageRank(true)
-
   }
 
   changeSolveSpiderTraps = async () => {
@@ -620,6 +801,16 @@ class Home extends React.Component {
     await this.setState({ solveSpiderTraps: !current })
     this.fullPageRank(true)
 
+  }
+
+  changeDisconnectedJumps = async () => {
+    var current = this.state.disconnectedJumps
+    await this.setState({ disconnectedJumps: !current })
+  }
+
+  changeSamePageJumps = async () => {
+    var current = this.state.samePageJumps
+    await this.setState({ samePageJumps: !current })
   }
   // CHECK CONTROLS ///////////////////////
 
@@ -1170,6 +1361,59 @@ class Home extends React.Component {
             </DialogActions>
           </Dialog>
         )
+      } else if (this.state.modal.type === 'JUMP_TO') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+            classes={{ paperScrollPaper: classes.root }}
+          >
+            <DialogTitle id='alert-dialog-title'>{'Travel to a Page'}</DialogTitle>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <Select
+                className='basic-single'
+                classNamePrefix='select'
+                placeholder='Page'
+                isClearable={true}
+                isSearchable={true}
+                options={this.state.selects.nodes}
+                onChange={this.changeJumpNode}
+                value={this.state.jumpPageSelect || ''}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNoDeletePage'
+              >
+                Please select the node you want to jump to!
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                onClick={() => this.jumpToNode(false, this.state.jumpPageSelect)}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
       } else if (this.state.modal.type === 'SHOW_HYPERLINK') {
         var i = 0
         modal = (
@@ -1181,7 +1425,7 @@ class Home extends React.Component {
             classes={{ paperScrollPaper: classes.root }}
             maxWidth="lg"
           >
-            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix (a.k.a Google Matrix)'}</DialogTitle>
+            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix'} {this.state.solveDeadEnds && this.state.solveSpiderTraps ? ' (Google Matrix)' : ''}</DialogTitle>
             <DialogContent
               className={classes.root}
               style={{ minWidth: '500px', maxWidth: "1500px" }}
@@ -1498,11 +1742,27 @@ class Home extends React.Component {
                 </Grid>
               </Grid>
 
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
+                  label='Solve Dead Ends'
+                />
+
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
+                  label='Solve Spider Traps'
+                />
+              </FormGroup>
+
+              <Grid item md={12} style={{ marginTop: "10px" }}>
+                <span style={{ color: "#f50057" }}>{this.state.solveDeadEnds && this.state.solveSpiderTraps ? 'Achieved Google Matrix!' : ''}</span>
+              </Grid>
+
               <hr
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.pagerank.noIterations})</span></h4>
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jump})</span></h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
                 <Grid item md={6}>
@@ -1510,9 +1770,10 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     size='medium'
+                    onClick={() => this.handleOpenJumpTo()}
                     style={{ width: '100%', fontSize: '12px', height: '100%' }}
                   >
-                    Pick Starting Node
+                    Travel to Node
                   </Button>
                 </Grid>
 
@@ -1521,6 +1782,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     size='medium'
+                    onClick={() => this.randomJump()}
                     style={{ width: '100%', height: '100%' }}
                   >
                     Jump
@@ -1533,6 +1795,7 @@ class Home extends React.Component {
                     color='secondary'
                     size='medium'
                     style={{ width: '100%', height: '100%' }}
+                    onClick={() => this.stop()}
                   >
                     Stop
                   </Button>
@@ -1541,13 +1804,13 @@ class Home extends React.Component {
 
               <FormGroup row style={{ marginTop: '20px' }}>
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()}/>}
-                  label='Solve Dead Ends'
+                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
+                  label='Disconnected jumps'
                 />
 
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()}/>}
-                  label='Solve Spider Traps'
+                  control={<Checkbox name='checkedA' value={this.state.samePageJumps} onChange={() => this.changeSamePageJumps()} />}
+                  label='Jumps to same Page'
                 />
               </FormGroup>
             </CardContent>
@@ -1558,6 +1821,18 @@ class Home extends React.Component {
 
     return (
       <div>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnVisibilityChange
+          draggable
+          pauseOnHover
+        />
+        <ToastContainer />
         <div
           style={{
             position: 'absolute',
