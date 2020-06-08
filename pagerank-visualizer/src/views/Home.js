@@ -159,6 +159,9 @@ class Home extends React.Component {
     disconnectedJumps: false,
     samePageJumps: false,
 
+    disconnectedJumpsQ: false,
+    samePageJumpsQ: false,
+
     pageRankValues: [],
 
     quality: {
@@ -182,7 +185,11 @@ class Home extends React.Component {
 
     jump: 0,
     jumpPage: null,
-    jumpPageSelect: null
+    jumpPageSelect: null,
+
+    jumpQ: 0,
+    jumpPageQ: null,
+    jumpPageSelectQ: null
   }
 
   async componentDidMount() {
@@ -445,7 +452,7 @@ class Home extends React.Component {
       qPRValues[i].current = qPRValues[i].pr
     }
 
-    for (var i = 1; i < this.state.quality.noIterations; i++) {
+    for (var i = 0; i < this.state.quality.noIterations; i++) {
       // First we get the averages
       var averageQuality = 0
       var marketSum = 0
@@ -546,6 +553,123 @@ class Home extends React.Component {
 
   }
   // PAGERANK CONTROLS ///////////////////////
+
+
+  // QUALITY CONTROLS //////////////////////
+  increaseIterationQuality = async () => {
+    var noIterations = this.state.quality.noIterations
+    noIterations++
+    await this.setState({
+      quality: {
+        noIterations: noIterations,
+        elasticity: this.state.quality.elasticity
+      }
+    })
+
+    this.fullQualityPageRank()
+  }
+
+  decreaseIterationQuality = async () => {
+    var noIterations = this.state.quality.noIterations
+    noIterations--
+    await this.setState({
+      quality: {
+        noIterations: noIterations,
+        elasticity: this.state.quality.elasticity
+      }
+    })
+
+    this.fullQualityPageRank()
+  }
+
+  jumpToIterationQuality = async () => {
+    var error = false
+    var iteration = document.getElementById('jumpToIterationQ')
+    if (
+      iteration === null ||
+      iteration.value === ''
+    ) {
+      iteration = 0
+      document.getElementById('errorNotDigit').style.display = 'none'
+
+    } else if (/^\d+$/.test(iteration.value)) {
+      iteration = iteration.value
+      document.getElementById('errorNotDigit').style.display = 'none'
+
+      if (iteration > 100000) {
+        error = true
+        document.getElementById('errorTooBig').style.display = ''
+      } else {
+        document.getElementById('errorTooBig').style.display = 'none'
+      }
+
+    } else {
+      error = true
+      document.getElementById('errorTooBig').style.display = 'none'
+      document.getElementById('errorNotDigit').style.display = ''
+    }
+
+
+
+
+    if (!error) {
+      await this.setState({
+        quality: {
+          noIterations: iteration,
+          elasticity: this.state.quality.elasticity
+        }
+      })
+
+      await this.fullQualityPageRank()
+
+      this.handleClose()
+    }
+
+  }
+
+  changeElasticity = async () => {
+    var error = false
+    var elasticity = document.getElementById('changeElasticityValue')
+    if (
+      elasticity === null ||
+      elasticity.value === ''
+    ) {
+      document.getElementById('errorWrongNumber').style.display = 'none'
+      error = true
+      this.handleClose()
+
+    } else if (!isNaN(elasticity.value)) {
+      elasticity = elasticity.value
+      document.getElementById('errorWrongNumber').style.display = 'none'
+
+      if (elasticity > 100 || elasticity < 0) {
+        error = true
+        document.getElementById('errorWrongNumber').style.display = ''
+      } else {
+        document.getElementById('errorWrongNumber').style.display = 'none'
+      }
+
+    } else {
+      error = true
+      document.getElementById('errorWrongNumber').style.display = ''
+    }
+
+    if (!error) {
+      elasticity = elasticity / 100
+      await this.setState({
+        quality: {
+          noIterations: this.state.quality.noIterations,
+          elasticity: elasticity
+        }
+      })
+
+      await this.fullQualityPageRank()
+
+      this.handleClose()
+    }
+
+  }
+  // QUALITY CONTROLS /////////////////////
 
 
   // SURFER CONTROLS ///////////////////////
@@ -715,6 +839,169 @@ class Home extends React.Component {
   }
   // SURFER CONTROLS ///////////////////////
 
+  // QUALITY SURFER CONTROLS ///////////////////////
+  jumpToNodeQuality = async (randomJump, newNode) => {
+
+    if (this.state.jumpPageQ != null) {
+      var oldId = null
+      if (this.state.jumpPageQ.id != null && this.state.jumpPageQ.id != undefined) {
+        oldId = this.state.jumpPageQ.id
+      } else {
+        oldId = this.state.jumpPageQ.value
+      }
+
+      try {
+        this.state.graphRef.clustering.updateClusteredNode(oldId, {
+          color: null
+        })
+      } catch (e) {
+
+      }
+
+    }
+
+    var nodeId = null
+    if (randomJump) {
+      nodeId = newNode.id
+    } else {
+      nodeId = newNode.value
+    }
+
+    await this.setState({ jumpPageQ: newNode })
+    this.state.graphRef.clustering.updateClusteredNode(nodeId, {
+      color: {
+        border: '#1a8749',
+        background: '#5be396',
+      }
+    })
+    this.state.graphRef.focus(nodeId, {
+      animation: {
+        duration: 100,
+        easingFunction: 'linear'
+      },
+    })
+
+    if (!randomJump) {
+      await this.setState({ jumpQ: 1 })
+    }
+
+    if (!randomJump) {
+      this.handleClose()
+    }
+  }
+
+  stopQuality = async () => {
+    if (this.state.jumpPageQ != null) {
+      var oldId = null
+      if (this.state.jumpPageQ.id != null && this.state.jumpPageQ.id != undefined) {
+        oldId = this.state.jumpPageQ.id
+      } else {
+        oldId = this.state.jumpPageQ.value
+      }
+
+      try {
+        this.state.graphRef.clustering.updateClusteredNode(oldId, {
+          color: null
+        })
+      } catch (e) {
+
+      }
+    }
+
+    await this.setState({ jump: 0, jumpPage: null })
+  }
+
+  async getRandomNodeQuality() {
+    function compare(a, b) {
+      if (a.current < b.current) {
+        return -1;
+      }
+      if (a.current > b.current) {
+        return 1;
+      }
+      return 0;
+    }
+
+    var pageRankValues = [...this.state.qualityPageRankValues];
+    pageRankValues = pageRankValues.sort(compare)
+
+    for (var attempt = 0; attempt < 500; attempt++) {
+      var randomNumber = Math.random()
+      var threshold = 0;
+      var winner = null
+
+      for (let i = 0; i < pageRankValues.length; i++) {
+        threshold += pageRankValues[i].current;
+        if (threshold > randomNumber) {
+          winner = pageRankValues[i]
+          break
+        }
+      }
+
+      if (winner != null) {
+        var violation = false
+
+        // Treat same page jumps
+        if (!this.state.samePageJumpsQ && this.state.jumpPageQ != null && (winner.id == this.state.jumpPageQ.id || winner.id == this.state.jumpPageQ.value)) {
+          violation = true
+        }
+
+        // Treat disconnected jumps
+        if (!this.state.disconnectedJumpsQ && this.state.jumpPageQ != null) {
+          var containsLink = false
+          var id
+          if (this.state.jumpPageQ.id != null && this.state.jumpPageQ.id != undefined) {
+            id = this.state.jumpPageQ.id
+          } else {
+            id = this.state.jumpPageQ.value
+          }
+
+          for (let relation of this.state.edges) {
+            if (relation.from == id && relation.to == winner.id) {
+              containsLink = true
+              break
+            }
+          }
+
+          if (!containsLink) {
+            violation = true
+          }
+        }
+
+        if (!violation) {
+          return winner
+        }
+      }
+    }
+
+    return null
+  }
+
+  randomJumpQuality = async () => {
+
+
+    var winner = await this.getRandomNodeQuality()
+
+    if (winner == null) {
+      toast.error('Sorry, the surfer wasn\'t able to make a jump! Perhaps the surfer\'s reached a Dead End and has nowhere to jump to! Change the network configuration, manually jump to the node you wish to visit or try again!', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
+    } else {
+      var curJump = this.state.jumpQ
+      curJump++
+
+      await this.setState({ jumpQ: curJump })
+
+      await this.jumpToNodeQuality(true, winner)
+    }
+  }
+  // QUALITY SURFER CONTROLS ///////////////////////
+
 
   // MODAL CONTROLS ///////////////////////
   handleOpenAdd = () => {
@@ -770,29 +1057,20 @@ class Home extends React.Component {
     }
     this.setState({
       showPageRank: !show,
-      showQuality: quality,
-      pagerank: {
-        noIterations: 0,
-        dampening: this.state.pagerank.dampening,
-        tolerance: this.state.pagerank.tolerance
-      }
+      showQuality: quality
     })
   }
 
-  handleShowHideQuality = () => {
+  handleShowHideQuality = async () => {
     var show = this.state.showQuality
     var rank = this.state.showPageRank
     if (show == false) {
       rank = false
+      await this.fullQualityPageRank()
     }
     this.setState({
       showPageRank: rank,
       showQuality: !show,
-      pagerank: {
-        noIterations: 0,
-        dampening: this.state.pagerank.dampening,
-        tolerance: this.state.pagerank.tolerance
-      }
     })
   }
 
@@ -801,6 +1079,15 @@ class Home extends React.Component {
       modal: {
         open: true,
         type: 'SHOW_JUMP_TO_ITERATION'
+      }
+    })
+  }
+
+  handleOpenJumpToIterationQuality = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'SHOW_JUMP_TO_ITERATION_QUALITY'
       }
     })
   }
@@ -814,11 +1101,29 @@ class Home extends React.Component {
     })
   }
 
+  handleOpenJumpToQuality = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'JUMP_TO_QUALITY'
+      }
+    })
+  }
+
   handleOpenTweakQuality = () => {
     this.setState({
       modal: {
         open: true,
         type: 'TWEAK_QUALITY'
+      }
+    })
+  }
+
+  handleOpenChangeElasticity = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'CHANGE_ELASTICITY'
       }
     })
   }
@@ -925,6 +1230,16 @@ class Home extends React.Component {
   changeSamePageJumps = async () => {
     var current = this.state.samePageJumps
     await this.setState({ samePageJumps: !current })
+  }
+
+  changeDisconnectedJumpsQuality = async () => {
+    var current = this.state.disconnectedJumpsQ
+    await this.setState({ disconnectedJumpsQ: !current })
+  }
+
+  changeSamePageJumpsQuality = async () => {
+    var current = this.state.samePageJumpsQ
+    await this.setState({ samePageJumpsQ: !current })
   }
   // CHECK CONTROLS ///////////////////////
 
@@ -1059,7 +1374,8 @@ class Home extends React.Component {
         }
       })
 
-      this.fullPageRank(true)
+      await this.fullPageRank(true)
+      await this.fullQualityPageRank()
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -1115,7 +1431,8 @@ class Home extends React.Component {
         deleteLink: null
       })
 
-      this.fullPageRank(true)
+      await this.fullPageRank(true)
+      await this.fullQualityPageRank()
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -1196,11 +1513,22 @@ class Home extends React.Component {
         }
 
         if (page == oldId) {
-          await this.setState({ jumpPage: null })
+          await this.setState({ jump: 0, jumpPage: null })
         }
       }
 
-      await this.setState({ jump: 0, jumpPage: null })
+      if (this.state.jumpPageQ != null) {
+        var oldId = null
+        if (this.state.jumpPageQ.id != null && this.state.jumpPageQ.id != undefined) {
+          oldId = this.state.jumpPageQ.id
+        } else {
+          oldId = this.state.jumpPageQ.value
+        }
+
+        if (page == oldId) {
+          await this.setState({ jumpQ: 0, jumpPageQ: null })
+        }
+      }
 
       await this.setState({
         nodes: newPages,
@@ -1269,6 +1597,8 @@ class Home extends React.Component {
       await this.setState({
         baseQuality: baseQuality
       })
+
+      this.fullQualityPageRank()
 
       this.handleClose()
     }
@@ -1917,6 +2247,171 @@ class Home extends React.Component {
             </DialogActions>
           </Dialog>
         )
+      } else if (this.state.modal.type === 'SHOW_JUMP_TO_ITERATION_QUALITY') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Jump to Iteration'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px' }}>
+              <TextField
+                id='jumpToIterationQ'
+                label='Iteration Number'
+                variant='outlined'
+                fullWidth={true}
+                onKeyDown={this.keydown}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNotDigit'
+              >
+                Please specify a number (without any letters or symbols)
+              </span>
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorTooBig'
+              >
+                Sorry, the limit of iterations is 100000...
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                id='confirm'
+                onClick={() => this.jumpToIterationQuality()}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'JUMP_TO_QUALITY') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+            classes={{ paperScrollPaper: classes.root }}
+          >
+            <DialogTitle id='alert-dialog-title'>{'Travel to a Page'}</DialogTitle>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <Select
+                className='basic-single'
+                classNamePrefix='select'
+                placeholder='Page'
+                isClearable={true}
+                isSearchable={true}
+                options={this.state.selects.nodes}
+                onChange={this.changeJumpNode}
+                value={this.state.jumpPageSelect || ''}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNoDeletePage'
+              >
+                Please select the node you want to jump to!
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                onClick={() => this.jumpToNodeQuality(false, this.state.jumpPageSelect)}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'CHANGE_ELASTICITY') {
+        var label = "Elasticity Value (current value is " + this.state.quality.elasticity * 100 + "%)"
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Change Elasticity'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden" }}>
+              <TextField
+                id='changeElasticityValue'
+                label={label}
+                variant='outlined'
+                fullWidth={true}
+                onKeyDown={this.keydown}
+              />
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorWrongNumber'
+              >
+                Please pick a percentile number (between 0 and 100)
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                id='confirm'
+                onClick={() => this.changeElasticity()}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
       }
     }
 
@@ -1924,6 +2419,7 @@ class Home extends React.Component {
     if (this.state.pagerank.noIterations > 0) {
       backIteration = ''
     }
+
 
     var showPageRank = 'Show'
     var pagerank = null
@@ -2102,15 +2598,21 @@ class Home extends React.Component {
 
     var showQuality = "Show"
     var quality = null
+
+    var backIterationQuality = 'none'
+    if (this.state.quality.noIterations > 0) {
+      backIterationQuality = ''
+    }
     if (this.state.showQuality) {
       showQuality = 'Hide'
       quality = (
         <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
           <Card style={{ width: '500px' }}>
             <CardContent>
-              <h2 style={{ color: '#38393b' }}>Quality PageRank</h2>
+              <h2 style={{ color: '#38393b' }}>Quality PageRank <span style={{ color: "#999", fontSize: "15px", fontWeight: "lighter" }}>(using PageRank iteration {this.state.pagerank.noIterations} values)</span></h2>
+              <span style={{ color: "#f50057" }}>Elasticity: {this.state.quality.elasticity * 100}%</span>
 
-              <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
+              <hr style={{ color: '#38393b', opacity: 0.2, marginTop: "15px" }}></hr>
 
               <Grid container spacing={2} >
                 <Grid item md={12}>
@@ -2121,9 +2623,9 @@ class Home extends React.Component {
                         marginRight: '10px',
                         color: '#3f51b5',
                         cursor: 'pointer',
-                        display: backIteration
+                        display: backIterationQuality
                       }}
-                      onClick={() => this.decreaseIteration()}
+                      onClick={() => this.decreaseIterationQuality()}
                     ></i>
                     Iteration {this.state.quality.noIterations}
                     <i
@@ -2133,7 +2635,7 @@ class Home extends React.Component {
                         color: '#3f51b5',
                         cursor: 'pointer'
                       }}
-                      onClick={() => this.increaseIteration()}
+                      onClick={() => this.increaseIterationQuality()}
                     ></i>
                   </h4>
                   <TableContainer>
@@ -2183,34 +2685,23 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleOpenJumpToIteration()}
+                    onClick={() => this.handleOpenJumpToIterationQuality()}
                   >
                     Jump to Iteration
                   </Button>
                 </Grid>
+
               </Grid>
 
-              <FormGroup row style={{ marginTop: '20px' }}>
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} checked={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
-                  label='Solve Dead Ends'
-                />
-
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} checked={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
-                  label='Solve Spider Traps'
-                />
-              </FormGroup>
-
               <Grid item md={12} style={{ marginTop: "10px" }}>
-                <span style={{ color: "#f50057" }}>{this.state.solveDeadEnds && this.state.solveSpiderTraps ? 'Achieved Google Matrix!' : ''}</span>
+                <span style={{ color: "#f50057" }}>{this.state.solveDeadEnds && this.state.solveSpiderTraps ? 'Using Google Matrix!' : ''}</span>
               </Grid>
 
               <hr
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jump})</span></h4>
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jumpQ})</span></h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
                 <Grid item md={6}>
@@ -2218,7 +2709,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     size='medium'
-                    onClick={() => this.handleOpenJumpTo()}
+                    onClick={() => this.handleOpenJumpToQuality()}
                     style={{ width: '100%', fontSize: '12px', height: '100%' }}
                   >
                     Travel to Node
@@ -2230,7 +2721,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     size='medium'
-                    onClick={() => this.randomJump()}
+                    onClick={() => this.randomJumpQuality()}
                     style={{ width: '100%', height: '100%' }}
                   >
                     Jump
@@ -2243,7 +2734,7 @@ class Home extends React.Component {
                     color='secondary'
                     size='medium'
                     style={{ width: '100%', height: '100%' }}
-                    onClick={() => this.stop()}
+                    onClick={() => this.stopQuality()}
                   >
                     Stop
                   </Button>
@@ -2252,12 +2743,12 @@ class Home extends React.Component {
 
               <FormGroup row style={{ marginTop: '20px' }}>
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumps} checked={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
+                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumpsQ} checked={this.state.disconnectedJumpsQ} onChange={() => this.changeDisconnectedJumpsQuality()} />}
                   label='Disconnected jumps'
                 />
 
                 <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.samePageJumps} checked={this.state.samePageJumps} onChange={() => this.changeSamePageJumps()} />}
+                  control={<Checkbox name='checkedA' value={this.state.samePageJumpsQ} checked={this.state.samePageJumpsQ} onChange={() => this.changeSamePageJumpsQuality()} />}
                   label='Jumps to same Page'
                 />
               </FormGroup>
@@ -2299,7 +2790,7 @@ class Home extends React.Component {
           />
         </div>
 
-        <div style={{ position: 'fixed', top: '25px', left: '25px' }}>
+        <div style={{ position: 'absolute', top: '25px', left: '25px' }}>
           <Card style={{ width: '400px' }}>
             <CardContent>
               <h2 style={{ color: '#38393b' }}>Controls</h2>
@@ -2419,7 +2910,7 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleShowHidePageRank()}
+                    onClick={() => this.handleOpenChangeElasticity()}
                   >
                     Change Elasticity
                   </Button>
