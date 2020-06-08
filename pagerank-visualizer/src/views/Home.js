@@ -160,17 +160,17 @@ class Home extends React.Component {
     pageRankValues: [],
 
     quality: {
-      noIterations: 10,
+      noIterations: 0,
       elasticity: 1
     },
     qualityPageRankValues: [],
 
     baseQuality: [
-      { id: 'P1', quality: 200 },
-      { id: 'P2', quality: 100 },
-      { id: 'P3', quality: 100 },
-      { id: 'P4', quality: 100 },
-      { id: 'P5', quality: 100 }
+      { id: 'P1', quality: 300 },
+      { id: 'P2', quality: 50 },
+      { id: 'P3', quality: 50 },
+      { id: 'P4', quality: 50 },
+      { id: 'P5', quality: 50 }
     ],
 
     hMatrix: null,
@@ -435,49 +435,36 @@ class Home extends React.Component {
 
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
   async fullQualityPageRank() {
+    //var qPRValues = [{ id: "Qa", base: 500, current: 500, quality: 10 }, { id: "Qb", base: 3, current: 3, quality: 12 }, { id: "Qc", base: 300, current: 300, quality: 6 }]
     var qPRValues = this.state.pageRankValues
     for (var i = 0; i < qPRValues.length; i++) {
-      qPRValues[i]["quality"] = this.state.baseQuality.find(element => element.id = qPRValues[i].id).quality;
-      qPRValues[i]["qPR"] = this.state.pageRankValues[i].pr
+      qPRValues[i].quality = this.state.baseQuality.find(element => element.id == qPRValues[i].id).quality
+      qPRValues[i].base = qPRValues[i].pr
+      qPRValues[i].current = qPRValues[i].pr
     }
 
-    // At iteration 0 the market value is the current pagerank value
-    if (this.state.quality.noIterations == 0) {
-      this.setState({ qualityPageRankValues: this.state.pageRankValues })
-    } else {
-
-      // First get the average quality
+    for (var i = 1; i < this.state.quality.noIterations; i++) {
+      // First we get the averages
       var averageQuality = 0
-      var sumPageRanks = 0
-      for (var i = 0; i < qPRValues.length; i++) {
-        var node = this.state.baseQuality.find(element => element.id = qPRValues[i].id);
+      var marketSum = 0
 
-        averageQuality += qPRValues[i].pr * node.quality
-        sumPageRanks += qPRValues[i].pr
+      for (var j = 0; j < qPRValues.length; j++) {
+        averageQuality += qPRValues[j].current * qPRValues[j].quality
+        marketSum += qPRValues[j].current
       }
 
-      averageQuality = averageQuality / sumPageRanks
+      averageQuality = averageQuality / marketSum
 
-      // Now Iterate
-      for (var i = 1; i < this.state.quality.noIterations; i++) {
-        for (var j = 0; j < qPRValues.length; j++) {
-          var node = qPRValues[j]
-          var relativeQPR = node.quality / averageQuality
-          var qPRChange = this.state.quality.elasticity * (relativeQPR - 1)
+      for (var n = 0; n < qPRValues.length; n++) {
+        var relativeQuality = qPRValues[n].quality / averageQuality
+        var marketChange = this.state.quality.elasticity * (relativeQuality - 1)
 
-          var newQPR = node.qPR + qPRChange
-
-          qPRValues[j].qPR = newQPR
-        }
+        qPRValues[n].current = qPRValues[n].current + qPRValues[n].current * marketChange
       }
 
-      await this.setState({
-        qualityPageRankValues: qPRValues
-      })
-
-
-      console.log(format(qPRValues, { fraction: 'decimal' }))
     }
+
+    await this.setState({qualityPageRankValues: qPRValues})
   }
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
 
@@ -1992,7 +1979,7 @@ class Home extends React.Component {
                                   <b>{pagerank.id}</b>
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(round(pagerank.pr, 10), {
+                                  {format(round(pagerank.base, 5), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
@@ -2000,7 +1987,7 @@ class Home extends React.Component {
                                   {pagerank.quality}
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(round(pagerank.qPR, 10), {
+                                  {format(round(pagerank.current, 10), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
@@ -2245,6 +2232,18 @@ class Home extends React.Component {
                     onClick={() => this.handleShowHideQuality()}
                   >
                     {showQuality} Quality
+                  </Button>
+                </Grid>
+              </Grid>
+              <Grid container spacing={2} style={{ marginTop: '20px' }}>
+                <Grid item md={12}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleShowHidePageRank()}
+                  >
+                    Change Elasticity
                   </Button>
                 </Grid>
               </Grid>
