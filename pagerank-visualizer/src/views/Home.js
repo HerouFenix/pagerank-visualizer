@@ -158,10 +158,15 @@ class Home extends React.Component {
     samePageJumps: false,
 
     pageRankValues: [],
+
+    quality: {
+      noIterations: 10,
+      elasticity: 1
+    },
     qualityPageRankValues: [],
 
     baseQuality: [
-      { id: 'P1', quality: 100 },
+      { id: 'P1', quality: 200 },
       { id: 'P2', quality: 100 },
       { id: 'P3', quality: 100 },
       { id: 'P4', quality: 100 },
@@ -430,10 +435,49 @@ class Home extends React.Component {
 
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
   async fullQualityPageRank() {
-    var start = []
-    var initialVal = this.state.pageRankValues
+    var qPRValues = this.state.pageRankValues
+    for (var i = 0; i < qPRValues.length; i++) {
+      qPRValues[i]["quality"] = this.state.baseQuality.find(element => element.id = qPRValues[i].id).quality;
+      qPRValues[i]["qPR"] = this.state.pageRankValues[i].pr
+    }
 
-    console.log(format(this.state.pageRankValues))
+    // At iteration 0 the market value is the current pagerank value
+    if (this.state.quality.noIterations == 0) {
+      this.setState({ qualityPageRankValues: this.state.pageRankValues })
+    } else {
+
+      // First get the average quality
+      var averageQuality = 0
+      var sumPageRanks = 0
+      for (var i = 0; i < qPRValues.length; i++) {
+        var node = this.state.baseQuality.find(element => element.id = qPRValues[i].id);
+
+        averageQuality += qPRValues[i].pr * node.quality
+        sumPageRanks += qPRValues[i].pr
+      }
+
+      averageQuality = averageQuality / sumPageRanks
+
+      // Now Iterate
+      for (var i = 1; i < this.state.quality.noIterations; i++) {
+        for (var j = 0; j < qPRValues.length; j++) {
+          var node = qPRValues[j]
+          var relativeQPR = node.quality / averageQuality
+          var qPRChange = this.state.quality.elasticity * (relativeQPR - 1)
+
+          var newQPR = node.qPR + qPRChange
+
+          qPRValues[j].qPR = newQPR
+        }
+      }
+
+      await this.setState({
+        qualityPageRankValues: qPRValues
+      })
+
+
+      console.log(format(qPRValues, { fraction: 'decimal' }))
+    }
   }
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
 
@@ -1916,7 +1960,7 @@ class Home extends React.Component {
                       }}
                       onClick={() => this.decreaseIteration()}
                     ></i>
-                    Iteration {this.state.pagerank.noIterations}
+                    Iteration {this.state.quality.noIterations}
                     <i
                       class='fas fa-chevron-right fa-lg'
                       style={{
@@ -1948,13 +1992,15 @@ class Home extends React.Component {
                                   <b>{pagerank.id}</b>
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {pagerank.ingoing}
-                                </TableCell>
-                                <TableCell align='left'>
-                                  {pagerank.outgoing}
-                                </TableCell>
-                                <TableCell align='left'>
                                   {format(round(pagerank.pr, 10), {
+                                    fraction: 'decimal'
+                                  })}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {pagerank.quality}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {format(round(pagerank.qPR, 10), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
