@@ -158,18 +158,29 @@ class Home extends React.Component {
     samePageJumps: false,
 
     pageRankValues: [],
+    qualityPageRankValues: [],
+
+    baseQuality: [
+      { id: 'P1', quality: 100 },
+      { id: 'P2', quality: 100 },
+      { id: 'P3', quality: 100 },
+      { id: 'P4', quality: 100 },
+      { id: 'P5', quality: 100 }
+    ],
 
     hMatrix: null,
 
     showPageRank: false,
+    showQuality: false,
 
     jump: 0,
     jumpPage: null,
     jumpPageSelect: null
   }
 
-  componentDidMount() {
-    this.fullPageRank(true)
+  async componentDidMount() {
+    await this.fullPageRank(true)
+    await this.fullQualityPageRank()
   }
 
   // PAGERANK COMPUTATIONS ///////////////////////
@@ -414,8 +425,18 @@ class Home extends React.Component {
       hMatrix: finalMatrix
     })
   }
-
   // PAGERANK COMPUTATIONS ///////////////////////
+
+
+  // QUALITY PAGERANK COMPUTATIONS ///////////////////////
+  async fullQualityPageRank() {
+    var start = []
+    var initialVal = this.state.pageRankValues
+
+    console.log(format(this.state.pageRankValues))
+  }
+  // QUALITY PAGERANK COMPUTATIONS ///////////////////////
+
 
   // PAGERANK CONTROLS ///////////////////////
   increaseIteration = async () => {
@@ -710,8 +731,30 @@ class Home extends React.Component {
 
   handleShowHidePageRank = () => {
     var show = this.state.showPageRank
+    var quality = this.state.showQuality
+    if (show == false) {
+      quality = false
+    }
     this.setState({
       showPageRank: !show,
+      showQuality: quality,
+      pagerank: {
+        noIterations: 0,
+        dampening: this.state.pagerank.dampening,
+        tolerance: this.state.pagerank.tolerance
+      }
+    })
+  }
+
+  handleShowHideQuality = () => {
+    var show = this.state.showQuality
+    var rank = this.state.showPageRank
+    if (show == false) {
+      rank = false
+    }
+    this.setState({
+      showPageRank: rank,
+      showQuality: !show,
       pagerank: {
         noIterations: 0,
         dampening: this.state.pagerank.dampening,
@@ -1678,9 +1721,9 @@ class Home extends React.Component {
     if (this.state.showPageRank) {
       showPageRank = 'Hide'
       pagerank = (
-        <div style={{ position: 'fixed', top: '25px', right: '25px' }}>
+        <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
           <Card style={{ width: '500px' }}>
-            <CardContent>
+            <CardContent style={{ overflow: "scroll" }}>
               <h2 style={{ color: '#38393b' }}>PageRank</h2>
 
               <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
@@ -1721,8 +1764,8 @@ class Home extends React.Component {
                       </TableHead>
                     </Table>
                     <Table aria-label='simple table'>
-                      <div style={{ overflow: 'auto', maxHeight: '340px' }}>
-                        <Table style={{ tableLayout: 'fixed' }}>
+                      <div style={{ overflow: 'auto' }}>
+                        <Table style={{ tableLayout: 'fixed', maxHeight: '300px' }}>
                           <TableBody>
                             {this.state.pageRankValues.map(pagerank => (
                               <TableRow key={pagerank.id}>
@@ -1767,6 +1810,171 @@ class Home extends React.Component {
                     onClick={() => this.pageRankToStabilization()}
                   >
                     Jump to Stabilization
+                  </Button>
+                </Grid>
+              </Grid>
+
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} checked={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
+                  label='Solve Dead Ends'
+                />
+
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} checked={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
+                  label='Solve Spider Traps'
+                />
+              </FormGroup>
+
+              <Grid item md={12} style={{ marginTop: "10px" }}>
+                <span style={{ color: "#f50057" }}>{this.state.solveDeadEnds && this.state.solveSpiderTraps ? 'Achieved Google Matrix!' : ''}</span>
+              </Grid>
+
+              <hr
+                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+              ></hr>
+
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jump})</span></h4>
+
+              <Grid container spacing={2} style={{ marginTop: '20px' }}>
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    size='medium'
+                    onClick={() => this.handleOpenJumpTo()}
+                    style={{ width: '100%', fontSize: '12px', height: '100%' }}
+                  >
+                    Travel to Node
+                  </Button>
+                </Grid>
+
+                <Grid item md={3}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    size='medium'
+                    onClick={() => this.randomJump()}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    Jump
+                  </Button>
+                </Grid>
+
+                <Grid item md={3}>
+                  <Button
+                    variant='outlined'
+                    color='secondary'
+                    size='medium'
+                    style={{ width: '100%', height: '100%' }}
+                    onClick={() => this.stop()}
+                  >
+                    Stop
+                  </Button>
+                </Grid>
+              </Grid>
+
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.disconnectedJumps} checked={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
+                  label='Disconnected jumps'
+                />
+
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.samePageJumps} checked={this.state.samePageJumps} onChange={() => this.changeSamePageJumps()} />}
+                  label='Jumps to same Page'
+                />
+              </FormGroup>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
+
+    var showQuality = "Show"
+    var quality = null
+    if (this.state.showQuality) {
+      showQuality = 'Hide'
+      quality = (
+        <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
+          <Card style={{ width: '500px' }}>
+            <CardContent>
+              <h2 style={{ color: '#38393b' }}>Quality PageRank</h2>
+
+              <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
+
+              <Grid container spacing={2} >
+                <Grid item md={12}>
+                  <h4 style={{ color: '#999' }}>
+                    <i
+                      class='fas fa-chevron-left fa-lg'
+                      style={{
+                        marginRight: '10px',
+                        color: '#3f51b5',
+                        cursor: 'pointer',
+                        display: backIteration
+                      }}
+                      onClick={() => this.decreaseIteration()}
+                    ></i>
+                    Iteration {this.state.pagerank.noIterations}
+                    <i
+                      class='fas fa-chevron-right fa-lg'
+                      style={{
+                        marginLeft: '10px',
+                        color: '#3f51b5',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => this.increaseIteration()}
+                    ></i>
+                  </h4>
+                  <TableContainer>
+                    <Table aria-label='simple table'>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Page</TableCell>
+                          <TableCell align='left'>Base PageRank</TableCell>
+                          <TableCell align='left'>Quality</TableCell>
+                          <TableCell align='left'>Quality PageRank</TableCell>
+                        </TableRow>
+                      </TableHead>
+                    </Table>
+                    <Table aria-label='simple table'>
+                      <div style={{ overflow: 'auto', maxHeight: '300px' }}>
+                        <Table style={{ tableLayout: 'fixed' }}>
+                          <TableBody>
+                            {this.state.qualityPageRankValues.map(pagerank => (
+                              <TableRow key={pagerank.id}>
+                                <TableCell align='left'>
+                                  <b>{pagerank.id}</b>
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {pagerank.ingoing}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {pagerank.outgoing}
+                                </TableCell>
+                                <TableCell align='left'>
+                                  {format(round(pagerank.pr, 10), {
+                                    fraction: 'decimal'
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+
+                <Grid item md={6}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    style={{ width: '100%' }}
+                    onClick={() => this.handleOpenJumpToIteration()}
+                  >
+                    Jump to Iteration
                   </Button>
                 </Grid>
               </Grid>
@@ -1970,7 +2178,7 @@ class Home extends React.Component {
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Page Quality</h4>
+              <h4 style={{ color: '#999' }}>Quality PageRank</h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
                 <Grid item md={6}>
@@ -1988,19 +2196,10 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleOpenHyperLink()}
+                    onClick={() => this.handleShowHideQuality()}
                   >
-                    Show Quality
+                    {showQuality} Quality
                   </Button>
-                </Grid>
-
-                <Grid item md={12}>
-                  <FormGroup row>
-                    <FormControlLabel
-                      control={<Checkbox name='checkedQ' value={this.state.disconnectedJumps} checked={this.state.disconnectedJumps} onChange={() => this.changeDisconnectedJumps()} />}
-                      label='Enable Quality Influence'
-                    />
-                  </FormGroup>
                 </Grid>
               </Grid>
             </CardContent>
@@ -2008,6 +2207,8 @@ class Home extends React.Component {
         </div>
 
         {pagerank}
+
+        {quality}
 
         {modal}
       </div>
