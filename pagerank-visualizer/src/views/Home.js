@@ -97,6 +97,8 @@ class Home extends React.Component {
       to: null
     },
 
+    newQuality: null,
+
     deleteLink: null,
     deletePage: null,
 
@@ -166,11 +168,11 @@ class Home extends React.Component {
     qualityPageRankValues: [],
 
     baseQuality: [
-      { id: 'P1', quality: 300 },
-      { id: 'P2', quality: 50 },
-      { id: 'P3', quality: 50 },
-      { id: 'P4', quality: 50 },
-      { id: 'P5', quality: 50 }
+      { id: 'P1', quality: 10 },
+      { id: 'P2', quality: 10 },
+      { id: 'P3', quality: 10 },
+      { id: 'P4', quality: 10 },
+      { id: 'P5', quality: 10 }
     ],
 
     hMatrix: null,
@@ -464,7 +466,7 @@ class Home extends React.Component {
 
     }
 
-    await this.setState({qualityPageRankValues: qPRValues})
+    await this.setState({ qualityPageRankValues: qPRValues })
   }
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
 
@@ -812,10 +814,20 @@ class Home extends React.Component {
     })
   }
 
+  handleOpenTweakQuality = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'TWEAK_QUALITY'
+      }
+    })
+  }
+
 
   handleClose = () => {
     this.setState({
       jumpPageSelect: null,
+      newQuality: null,
       modal: {
         open: false,
         type: null
@@ -834,6 +846,20 @@ class Home extends React.Component {
     } else {
       await this.setState({
         newLink: { from: null, to: this.state.newLink.to }
+      })
+    }
+  }
+
+  changeQualityPage = async selectedOption => {
+    if (selectedOption != null) {
+      document.getElementById("newQualityInput").value = this.state.baseQuality.find(element => element.id == selectedOption.value).quality
+      await this.setState({
+        newQuality: selectedOption
+      })
+    } else {
+      document.getElementById("newQualityInput").value = null
+      await this.setState({
+        newQuality: null
       })
     }
   }
@@ -949,15 +975,21 @@ class Home extends React.Component {
       var selectNewNodes = this.state.selects.nodes
       selectNewNodes.push({ value: name, label: name })
 
+      var baseQuality = this.state.baseQuality
+
+      baseQuality.push({ id: name, quality: 10 })
+
       await this.setState({
         nodes: newNodes,
         selects: {
           nodes: selectNewNodes,
           edges: this.state.selects.edges
-        }
+        },
+        baseQuality: baseQuality
       })
 
-      this.fullPageRank(true)
+      await this.fullPageRank(true)
+      await this.fullQualityPageRank()
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
@@ -1116,6 +1148,15 @@ class Home extends React.Component {
         }
       }
 
+      var baseQuality = []
+      for (let node of this.state.baseQuality) {
+        if (node.id === page) {
+          continue
+        } else {
+          baseQuality.push(node)
+        }
+      }
+
       var selectNewNodes = []
       for (let node of this.state.selects.nodes) {
         if (node.value === page) {
@@ -1168,13 +1209,66 @@ class Home extends React.Component {
           nodes: selectNewNodes,
           edges: selectNewLinks
         },
-        deletePage: null
+        deletePage: null,
+        baseQuality: baseQuality
       })
 
-      this.fullPageRank(true)
+      await this.fullPageRank(true)
+      await this.fullQualityPageRank()
 
       await this.state.graphRef.body.emitter.emit('_dataChanged')
       await this.state.graphRef.redraw()
+
+      this.handleClose()
+    }
+  }
+
+  changeQuality = async () => {
+    var error = false
+
+    var newQualityValue = document.getElementById('newQualityInput')
+    console.log(newQualityValue.value)
+
+    if (
+      newQualityValue === null ||
+      newQualityValue.value === ''
+    ) {
+      document.getElementById('errorInvalidQuality').style.display = ''
+      error = true
+    } else {
+      newQualityValue = newQualityValue.value
+      document.getElementById('errorInvalidQuality').style.display = 'none'
+
+      if (!/^\+?(0|[1-9]\d*)$/.test(newQualityValue)) {
+        document.getElementById('errorInvalidQuality').style.display = ''
+        error = true
+      } else {
+        document.getElementById('errorInvalidQuality').style.display = 'none'
+      }
+    }
+
+    if (this.state.newQuality == null || this.state.newQuality == "") {
+      document.getElementById('errorNoPage').style.display = ''
+      error = true
+    } else {
+      document.getElementById('errorNoPage').style.display = 'none'
+    }
+
+
+    if (!error) {
+
+      var baseQuality = []
+      for (let node of this.state.baseQuality) {
+        if (node.id == this.state.newQuality.value) {
+          baseQuality.push({ id: node.id, quality: newQualityValue })
+        } else {
+          baseQuality.push(node)
+        }
+      }
+
+      await this.setState({
+        baseQuality: baseQuality
+      })
 
       this.handleClose()
     }
@@ -1739,6 +1833,90 @@ class Home extends React.Component {
             </DialogActions>
           </Dialog>
         )
+      } else if (this.state.modal.type === 'TWEAK_QUALITY') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+            classes={{ paperScrollPaper: classes.root }}
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Change Page\'s Quality'}
+            </DialogTitle>
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <h4 style={{ color: '#999' }}>Page...</h4>
+              <Select
+                className='basic-single'
+                classNamePrefix='select'
+                placeholder='Starting Page'
+                isClearable={true}
+                isSearchable={true}
+                options={this.state.selects.nodes}
+                onChange={this.changeQualityPage}
+                value={this.state.newQuality || ''}
+              />
+            </DialogContent>
+
+            <DialogContent
+              className={classes.root}
+              style={{ minWidth: '500px' }}
+            >
+              <h4 style={{ color: '#999' }}>Quality</h4>
+
+              <TextField
+                id='newQualityInput'
+                variant='outlined'
+                fullWidth={true}
+                onKeyDown={this.keydown}
+              />
+
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorNoPage'
+              >
+                Please specify the page you want to change the quality of.
+              </span>
+            </DialogContent>
+
+            <DialogContent>
+              <span
+                style={{
+                  paddingTop: '40px',
+                  color: '#f50057',
+                  display: 'none'
+                }}
+                id='errorInvalidQuality'
+              >
+                Please specify a positive, integer quality value.
+              </span>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+              <Button
+                variant='outlined'
+                color='primary'
+                onClick={() => this.changeQuality()}
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
       }
     }
 
@@ -2219,9 +2397,9 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleShowHidePageRank()}
+                    onClick={() => this.handleShowHideQuality()}
                   >
-                    Tweak Quality
+                    {showQuality} Quality PR
                   </Button>
                 </Grid>
                 <Grid item md={6}>
@@ -2229,9 +2407,9 @@ class Home extends React.Component {
                     variant='outlined'
                     color='primary'
                     style={{ width: '100%' }}
-                    onClick={() => this.handleShowHideQuality()}
+                    onClick={() => this.handleOpenTweakQuality()}
                   >
-                    {showQuality} Quality
+                    Tweak Quality
                   </Button>
                 </Grid>
               </Grid>
