@@ -192,7 +192,9 @@ class Home extends React.Component {
     jumpPageSelectQ: null,
 
     showTooltips: false,
-    useFractions: false
+    useFractions: false,
+
+    showContent: true,
 
   }
 
@@ -1502,6 +1504,11 @@ class Home extends React.Component {
   changeUseFractions = async () => {
     var current = this.state.useFractions
     await this.setState({ useFractions: !current })
+  }
+
+  changeShowContent = async () => {
+    var current = this.state.showContent
+    await this.setState({ showContent: !current })
   }
 
   // CHECK CONTROLS ///////////////////////
@@ -2881,10 +2888,11 @@ class Home extends React.Component {
       showPageRank = 'Hide'
       pagerank = (
         <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
-          <Card style={{ width: '500px' }}>
+          <Card style={{ maxWidth: '500px' }}>
             <CardContent style={{ overflow: "scroll" }}>
               <h2 style={{ color: '#38393b' }}>PageRank
               <span style={{ marginLeft: "5px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainPageRank()}></i></span>
+                <span style={{ float: "right", fontSize: "20px" }}><i class="fas fa-chevron-left" style={{ color: "#f50057", cursor: "pointer" }} onClick={() => this.handleShowHidePageRank()}></i></span>
               </h2>
 
               <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
@@ -3070,11 +3078,13 @@ class Home extends React.Component {
       showQuality = 'Hide'
       quality = (
         <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
-          <Card style={{ width: '500px' }}>
+          <Card style={{ maxWidth: '500px' }}>
             <CardContent>
               <h2 style={{ color: '#38393b' }}>Quality PageRank
               <span style={{ marginLeft: "5px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainQualityPR()}></i></span>
-                <span style={{ marginLeft: "5px", color: "#999", fontSize: "13px", fontWeight: "lighter" }}>(using PageRank iteration {this.state.pagerank.noIterations} values)</span></h2>
+                <span style={{ marginLeft: "5px", color: "#999", fontSize: "13px", fontWeight: "lighter" }}>(using PageRank iteration {this.state.pagerank.noIterations} values)</span>
+                <span style={{ float: "right", fontSize: "20px" }}><i class="fas fa-chevron-left" style={{ color: "#f50057", cursor: "pointer" }} onClick={() => this.handleShowHideQuality()}></i></span>
+              </h2>
               <span style={{ color: "#f50057" }}>Elasticity: {this.state.quality.elasticity * 100}%
               <span style={{ marginLeft: "10px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainElasticity()}></i></span>
               </span>
@@ -3231,6 +3241,163 @@ class Home extends React.Component {
       )
     }
 
+    var content = <span style={{ position: 'absolute', top: '25px', left: '25px', fontSize: "20px" }}><i class="fas fa-bars" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.changeShowContent()}></i></span>
+
+    if (this.state.showContent) {
+      content = <div style={{ position: 'absolute', top: '25px', left: '25px' }}>
+        <Card style={{ width: '400px' }}>
+          <CardContent>
+            <h2 style={{ color: '#38393b' }}>Controls
+          <span style={{ float: "right", fontSize: "20px" }}><i class="fas fa-bars" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.changeShowContent()}></i></span>
+            </h2>
+
+            <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
+
+            <h4 style={{ color: '#999' }}>Graph</h4>
+
+            <Grid container spacing={2} style={{ marginTop: '20px' }}>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenAdd()}
+                >
+                  Add new Page
+              </Button>
+              </Grid>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenAddLink()}
+                >
+                  Add new Link
+              </Button>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2} style={{ marginTop: '20px' }}>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='secondary'
+                  size='medium'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenDeleteNode()}
+                >
+                  Remove Page
+              </Button>
+              </Grid>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='secondary'
+                  size='medium'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenDeleteLink()}
+                >
+                  Remove Link
+              </Button>
+              </Grid>
+            </Grid>
+
+            <hr
+              style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+            ></hr>
+
+            <h4 style={{ color: '#999' }}>PageRank</h4>
+
+            <Grid container spacing={2} style={{ marginTop: '20px' }}>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleShowHidePageRank()}
+                >
+                  {showPageRank} Pagerank
+              </Button>
+              </Grid>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenHyperLink()}
+                >
+                  Hyperlink Matrix
+              </Button>
+              </Grid>
+            </Grid>
+
+            <hr
+              style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+            ></hr>
+
+            <h4 style={{ color: '#999' }}>Quality PageRank</h4>
+
+            <Grid container spacing={2} style={{ marginTop: '20px' }}>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleShowHideQuality()}
+                >
+                  {showQuality} Quality PR
+              </Button>
+              </Grid>
+              <Grid item md={6}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenTweakQuality()}
+                >
+                  Tweak Quality
+              </Button>
+              </Grid>
+            </Grid>
+            <Grid container spacing={2} style={{ marginTop: '20px' }}>
+              <Grid item md={12}>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  style={{ width: '100%' }}
+                  onClick={() => this.handleOpenChangeElasticity()}
+                >
+                  Change Elasticity
+              </Button>
+              </Grid>
+            </Grid>
+
+            <hr
+              style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+            ></hr>
+
+            <FormGroup row style={{ marginTop: '20px' }}>
+              <FormControlLabel
+                control={<Checkbox name='checkedA' value={this.state.showTooltips} checked={this.state.showTooltips} onChange={() => this.changeShowToolTips()} />}
+                label='Show explanation tooltips'
+              />
+            </FormGroup>
+
+            <FormGroup row style={{ marginTop: '20px' }}>
+              <FormControlLabel
+                control={<Checkbox name='checkedA' value={this.state.useFractions} checked={this.state.useFractions} onChange={() => this.changeUseFractions()} />}
+                label='Use Fractions'
+              />
+            </FormGroup>
+
+          </CardContent>
+        </Card>
+      </div>
+
+    }
+
+
     return (
       <div>
         <ToastContainer
@@ -3263,154 +3430,7 @@ class Home extends React.Component {
           />
         </div>
 
-        <div style={{ position: 'absolute', top: '25px', left: '25px' }}>
-          <Card style={{ width: '400px' }}>
-            <CardContent>
-              <h2 style={{ color: '#38393b' }}>Controls</h2>
-
-              <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
-
-              <h4 style={{ color: '#999' }}>Graph</h4>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAdd()}
-                  >
-                    Add new Page
-                  </Button>
-                </Grid>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenAddLink()}
-                  >
-                    Add new Link
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='secondary'
-                    size='medium'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenDeleteNode()}
-                  >
-                    Remove Page
-                  </Button>
-                </Grid>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='secondary'
-                    size='medium'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenDeleteLink()}
-                  >
-                    Remove Link
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <hr
-                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
-              ></hr>
-
-              <h4 style={{ color: '#999' }}>PageRank</h4>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleShowHidePageRank()}
-                  >
-                    {showPageRank} Pagerank
-                  </Button>
-                </Grid>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenHyperLink()}
-                  >
-                    Hyperlink Matrix
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <hr
-                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
-              ></hr>
-
-              <h4 style={{ color: '#999' }}>Quality PageRank</h4>
-
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleShowHideQuality()}
-                  >
-                    {showQuality} Quality PR
-                  </Button>
-                </Grid>
-                <Grid item md={6}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenTweakQuality()}
-                  >
-                    Tweak Quality
-                  </Button>
-                </Grid>
-              </Grid>
-              <Grid container spacing={2} style={{ marginTop: '20px' }}>
-                <Grid item md={12}>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    style={{ width: '100%' }}
-                    onClick={() => this.handleOpenChangeElasticity()}
-                  >
-                    Change Elasticity
-                  </Button>
-                </Grid>
-              </Grid>
-
-              <hr
-                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
-              ></hr>
-
-              <FormGroup row style={{ marginTop: '20px' }}>
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.showTooltips} checked={this.state.showTooltips} onChange={() => this.changeShowToolTips()} />}
-                  label='Show explanation tooltips'
-                />
-              </FormGroup>
-
-              <FormGroup row style={{ marginTop: '20px' }}>
-                <FormControlLabel
-                  control={<Checkbox name='checkedA' value={this.state.useFractions} checked={this.state.useFractions} onChange={() => this.changeUseFractions()} />}
-                  label='Use Fractions'
-                />
-              </FormGroup>
-
-            </CardContent>
-          </Card>
-        </div>
+        {content}
 
         {pagerank}
 
