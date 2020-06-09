@@ -189,7 +189,11 @@ class Home extends React.Component {
 
     jumpQ: 0,
     jumpPageQ: null,
-    jumpPageSelectQ: null
+    jumpPageSelectQ: null,
+
+    showTooltips: false,
+    useFractions: false
+
   }
 
   async componentDidMount() {
@@ -201,6 +205,18 @@ class Home extends React.Component {
   async fullPageRank(newHMatrix) {
     var start = []
     var initialVal = fraction(1, this.state.nodes.length)
+
+    if (this.state.showTooltips) {
+      toast.success('Computing the PageRank of each page', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingPagerank"
+      });
+    }
 
     // Compute initial vector
     for (let node of this.state.nodes) {
@@ -220,7 +236,7 @@ class Home extends React.Component {
     }
 
     // Compute Hyperlink Matrix
-    if (newHMatrix || true) {
+    if (newHMatrix) {
       await this.computeHyperLinkMatrix(allNodes)
     }
     //console.log(format(this.state.hMatrix, { fraction: 'decimal' }))
@@ -231,6 +247,18 @@ class Home extends React.Component {
       curValArray.push(node.pr)
     }
     curValArray = matrix(curValArray)
+
+    if (this.state.showTooltips) {
+      toast.warning('For each page, it\'s pagerank value is given by:\n PR(iteration) = PR(iteration-1) * HMatrix', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "pageRankExplanation"
+      });
+    }
 
     for (var i = 0; i < this.state.pagerank.noIterations; i++) {
       var nextValArray = multiply(transpose(curValArray), this.state.hMatrix)
@@ -244,16 +272,39 @@ class Home extends React.Component {
       }).pr = curValArray._data[j]
     }
 
+    if (this.state.showTooltips) {
+      toast.success('Finished computing PageRank of each page', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "finishedComputingPagerank"
+      });
+    }
+
     await this.setState({
       pageRankValues: allNodes
     })
 
-    console.log(format(allNodes, { fraction: 'decimal' }))
   }
 
   pageRankToStabilization = async () => {
     var start = []
     var initialVal = fraction(1, this.state.nodes.length)
+
+    if (this.state.showTooltips) {
+      toast.success('Computing the PageRank until it stabilizes (i.e the sum difference of values, error, is less than 0.00000000001)', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingPagerankStab"
+      });
+    }
 
     // Compute initial vector
     for (let node of this.state.nodes) {
@@ -305,6 +356,18 @@ class Home extends React.Component {
       curValArray = nextValArray
     }
 
+    if (this.state.showTooltips) {
+      toast.success('PageRank values have reached convergence!', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingPagerankStabConv"
+      });
+    }
+
     // Update Values
     for (var j = 0; j < allNodes.length; j++) {
       allNodes.find(function (n, index) {
@@ -321,12 +384,23 @@ class Home extends React.Component {
       }
     })
 
-    console.log(format(allNodes, { fraction: 'decimal' }))
   }
 
   async computeHyperLinkMatrix(allNodes) {
     var comp = this.state.nodes.length
     var hMatrix = matrix(zeros([comp, comp]))
+
+    if (this.state.showTooltips) {
+      toast.success('Computing the HyperLink Matrix', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingPagerankStab"
+      });
+    }
 
     if (allNodes == null) {
       allNodes = []
@@ -375,6 +449,19 @@ class Home extends React.Component {
 
     hMatrix = hMatrix
 
+
+    if (this.state.showTooltips) {
+      toast.success('Finished computing the Hyperlink Matrix', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingPagerankStab"
+      });
+    }
+
     await this.setState({
       hMatrix: hMatrix
     })
@@ -391,6 +478,18 @@ class Home extends React.Component {
   }
 
   async solveDeadEnds() {
+    if (this.state.showTooltips) {
+      toast.success('Solving DeadEnd pages', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "solvingDeadEnds"
+      });
+    }
+
     var initialVal = fraction(1, this.state.nodes.length)
 
     // 1xN vector of 1s
@@ -417,6 +516,18 @@ class Home extends React.Component {
 
     var dankHMatrix = multiply(initialVal, multi)
 
+    if (this.state.showTooltips) {
+      toast.success('Finished Solving DeadEnd pages', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "solvingDeadEndsFinished"
+      });
+    }
+
     var finalMatrix = add(this.state.hMatrix, dankHMatrix)
     await this.setState({
       hMatrix: finalMatrix
@@ -424,6 +535,18 @@ class Home extends React.Component {
   }
 
   async solveSpiderTraps() {
+    if (this.state.showTooltips) {
+      toast.success('Solving SpiderTraps - Set of Pages that link to each other and none other', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "solvingSpiderTraps"
+      });
+
+    }
     var initialVal = fraction(1, this.state.nodes.length)
 
     // 1xN vector of 1s
@@ -435,6 +558,19 @@ class Home extends React.Component {
     randomJump = multiply(jumpProb, randomJump)
 
     var finalMatrix = add(continuing, randomJump)
+
+    if (this.state.showTooltips) {
+      toast.success('Finished Solving SpiderTraps', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "solvingDeadEndsFinished"
+      });
+    }
+
     await this.setState({
       hMatrix: finalMatrix
     })
@@ -444,6 +580,18 @@ class Home extends React.Component {
 
   // QUALITY PAGERANK COMPUTATIONS ///////////////////////
   async fullQualityPageRank() {
+    if (this.state.showTooltips) {
+      toast.success('Computing the Quality PageRank', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingQPR"
+      });
+    }
+
     //var qPRValues = [{ id: "Qa", base: 500, current: 500, quality: 10 }, { id: "Qb", base: 3, current: 3, quality: 12 }, { id: "Qc", base: 300, current: 300, quality: 6 }]
     var qPRValues = this.state.pageRankValues
     for (var i = 0; i < qPRValues.length; i++) {
@@ -471,6 +619,18 @@ class Home extends React.Component {
         qPRValues[n].current = qPRValues[n].current + qPRValues[n].current * marketChange
       }
 
+    }
+
+    if (this.state.showTooltips) {
+      toast.success('Finished computing the Quality PageRank', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "computingQPR7"
+      });
     }
 
     await this.setState({ qualityPageRankValues: qPRValues })
@@ -815,7 +975,17 @@ class Home extends React.Component {
   }
 
   randomJump = async () => {
-
+    if (this.state.showTooltips) {
+      toast.success('Jumping to a random page in accordance to the current PageRank values', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "randomJump1"
+      });
+    }
 
     var winner = await this.getRandomNode()
 
@@ -978,6 +1148,17 @@ class Home extends React.Component {
   }
 
   randomJumpQuality = async () => {
+    if (this.state.showTooltips) {
+      toast.success('Jumping to a random page in accordance to the current Quality PageRank values', {
+        position: "top-right",
+        autoClose: 7500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        toastId: "randomJump1"
+      });
+    }
 
 
     var winner = await this.getRandomNodeQuality()
@@ -1128,6 +1309,77 @@ class Home extends React.Component {
     })
   }
 
+  handleOpenExplainSpider = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_SPIDERTRAPS'
+      }
+    })
+  }
+
+  handleOpenExplainDead = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_DEADENDS'
+      }
+    })
+  }
+
+  handleOpenExplainPageRank = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_PAGERANK'
+      }
+    })
+  }
+
+  handleOpenExplainRandomSurfer = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_RANDOMSURFER'
+      }
+    })
+  }
+
+  handleOpenExplainHyperlink = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_HYPERLINK'
+      }
+    })
+  }
+
+  handleOpenExplainQualityPR = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_QUALITYPAGERANK'
+      }
+    })
+  }
+
+  handleOpenExplainElasticity = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'EXPLAIN_ELASTICITY'
+      }
+    })
+  }
+
+  handleCloseHyperlink = () => {
+    this.setState({
+      modal: {
+        open: true,
+        type: 'SHOW_HYPERLINK'
+      }
+    })
+  }
 
   handleClose = () => {
     this.setState({
@@ -1241,6 +1493,17 @@ class Home extends React.Component {
     var current = this.state.samePageJumpsQ
     await this.setState({ samePageJumpsQ: !current })
   }
+
+  changeShowToolTips = async () => {
+    var current = this.state.showTooltips
+    await this.setState({ showTooltips: !current })
+  }
+
+  changeUseFractions = async () => {
+    var current = this.state.useFractions
+    await this.setState({ useFractions: !current })
+  }
+
   // CHECK CONTROLS ///////////////////////
 
 
@@ -1952,7 +2215,9 @@ class Home extends React.Component {
             classes={{ paperScrollPaper: classes.root }}
             maxWidth="lg"
           >
-            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix'} {this.state.solveDeadEnds && this.state.solveSpiderTraps ? ' (Google Matrix)' : ''}</DialogTitle>
+            <DialogTitle id='alert-dialog-title'>{'HyperLink Matrix'} {this.state.solveDeadEnds && this.state.solveSpiderTraps ? ' (Google Matrix)' : ''}
+              <span style={{ marginLeft: "5px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainHyperlink()}></i></span>
+            </DialogTitle>
             <DialogContent
               className={classes.root}
               style={{ minWidth: '500px', maxWidth: "1500px" }}
@@ -1981,7 +2246,9 @@ class Home extends React.Component {
 
                           {row.map(page =>
                             <TableCell align='left'>
-                              {format(round(page, 10), {
+                              {this.state.useFractions ? format(round(page, 10), {
+                                fraction: 'fraction'
+                              }) : format(round(page, 10), {
                                 fraction: 'decimal'
                               })}
                             </TableCell>
@@ -2412,6 +2679,193 @@ class Home extends React.Component {
             </DialogActions>
           </Dialog>
         )
+      } else if (this.state.modal.type === 'EXPLAIN_SPIDERTRAPS') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'SpiderTraps'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>Spider Traps are anomalies caused by a set of pages having outgoing links between each other, which causes our surfer to be forced to trable in a loop.</p>
+              <p><span style={{ color: "#4758b8" }}>Solution: </span>To solve spider traps we basically want to give our surfer the possibility of not only entering pages by following links, but by also performing random jumps to disconnected pages (which correspond to the real life action of going to a page using bookmarks or inputting a URL directly).
+                To do this we use a probability called <b>dampening</b> and create a new HyperLink matrix, given by mutiplying our default matrix with this value and summing it with a new matrix of equal probabilities, which we multiply by 1-D, where D is the dampening probability</p>
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>Ĥ = D * H + (1-D) * (1/n * Ones(nxn))</p>
+              <p style={{}}><b>Ĥ</b> New HyperLink Matrix; <b>H</b> Current HyperLink Matrix; <b>D</b> Dampening Probability; <b>n</b> Number of pages; <b>Ones(nxn)</b> Matrix of dimension (nxn) filled with ones</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_DEADENDS') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'DeadEnds'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>DeadEnds are the name we give to nodes that have no outgoing links. If a surfer lands on this page he runs the risk of being stuck there without anyplace to go to. They're easy to identify in the HyperLink matrix since DeadEnds will have their whole row set to 0</p>
+              <p><span style={{ color: "#4758b8" }}>Solution: </span>Solving these anomalies is easy and corresponds to giving the surfer a probability of, when in a DeadEnd page, jumping to any other page in the network.
+                To solve DeadEnds we first identify them in the HyperLink matrix. We know a page is a Dead End if its row is filled with 0s. We'll cal the set of DeadEnd pages <b>Dangling Pages</b>.
+                We do an additional computation - 1/n * (Dangling Nodes Array * Array of Ones) - where n is the number of pages we have and Array of Ones is an array of length n filled with 1s and Dangling Nodes Array is an (nx1) matrix with 0s in every normal page and 1 in the row corresponding to DeadEnd pages.
+                Multiplying the Dangling Nodes with tha Array of Ones is going to create a new matrix of size nxn (the same size as the Hyperlink Matrix) with 0s on every row except for the ones that correspond to DeadEnd pages. We then multiply it by 1/n in order to give those pages an equal probability of jumping to any other page (even if they're not originally connected). This will make it so the random surfer doesn't get stuck and has somehwere to jump to.
+                Our new HyperLink matrix is given by summing our old HyperLink matrix and the new matrix we computed in the previous steps.</p>
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>Ĥ = H + 1/n * (w * Ones(1xn))</p>
+              <p style={{}}><b>Ĥ</b> New HyperLink Matrix; <b>H</b> Current HyperLink Matrix; <b>w</b> Matrix of dimensions (nx1) where each row that corresponds to a a Dangling Page has the value 1 whilst the others are set to 0; <b>n</b> Number of pages; <b>Ones(1xn)</b> Matrix of dimension (1xn) filled with ones</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_PAGERANK') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'PageRank'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>PageRank is an iterative algorithm that attempts to assign pages on a network a value corresponding to the probability of a user (also called a surfer) traveling to that page.</p>
+              <p><span style={{ color: "#4758b8" }}>How it works: </span>This algorithm scores pages in accordance to the number of other pages that link to it. Being iterative at first each page starts with an equal probability of being started on (i.e the initial pagerank of all pages is given by 1/n where n is the number of pages).
+              In each iteration a new value is calculated with the idea that at some point these values will converge to a stabilization (at which point we can stop the algorithm).</p>
+              <p><span style={{ color: "#4758b8" }}>Computation: </span>To compute the PageRank we utilize an HyperLink matrix (a matrix in which each cell (i,j) (row i, column j) in the matrix represents the probability of going from page i to page j). For each iteration of the algorithm the value of each page's PageRank is given by the following equation:</p>
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>PR(i) = PR(i-1) * H</p>
+              <p style={{}}><b>PR(i)</b> Array of PageRank values at iteration i; <b>PR(i-1)</b> Array of PageRank values at iteration i-1; <b>H</b> Current HyperLink Matrix;</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_RANDOMSURFER') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Random Surfer'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>The Random Surfer intends to simulate the behaviour of a normal user travelling through the web. As such they travel to a page in accordance to the current PageRank values of the pages.</p>
+              <p><span style={{ color: "#4758b8" }}>How it works: </span>We basically generate a random number between 0 and 1 and, in accordance to that number, try to pick the correspondant page to travel to (by stacking all pagerank values together, since they sum up to one)</p>
+              <p><span style={{ color: "#f72f76" }}>Disconnected Jumps: </span>By enabling this option you'll allow the random surfer to jump to pages, even if the current page they're on doesn't directly link to it</p>
+              <p><span style={{ color: "#f72f76" }}>Jumps to same Page: </span>By enabling this option you'll allow the random surfer to remain in the same page rather than jumping to another one</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_HYPERLINK') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'HyperLink Matrix'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>A matrix that contains the baseline probabilities of going from one page to another in the network.</p>
+              <p><span style={{ color: "#4758b8" }}>How it works: </span>Each cell (i,j) (row i, column j) in the matrix represents the probability of going from page i to page j. This is calculated by giving each page an equal probability of leading to its outgoing links.</p>
+              <p><span style={{ color: "#4758b8" }}>Restrictions: </span>Each row in the matrix should sum up to one. This restriction, however, is violated in case a node is a DeadEnd (i.e, has no outgoing links to any page). If not treated, this will make the random surfer get stuck and unable to leave this page.</p>
+              <p><span style={{ color: "#4758b8" }}>What we use it for: </span>This matrix is useful in computing the PageRank iterations since we can simply multiply the previous iteration\'s PageRank values by the matrix to get the current iteration's values.</p>
+              <p><span style={{ color: "#f72f76" }}>Google Matrix: </span>The Google Matrix is a special type of HyperLink Matrix that is achieved when we solve both DeadEnds and SpiderTraps anomalies.</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleCloseHyperlink()} color='secondary'>
+                Back
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_QUALITYPAGERANK') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Quality PageRank'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>The Quality PageRank is a modification to the PageRank algorithm that attempts to showcase the evolution of the pages' PageRank overtime in accordance to the quality of the content in the page.</p>
+              <p><span style={{ color: "#4758b8" }}>How it works: </span>This algorithm follows the idea that if a page has more quality content, compared to others, surfers will be drawn to visit it over others, hence their PageRank will increase. By default, each page is ranked with a quality value of 10</p>
+              <p><span style={{ color: "#4758b8" }}>Computation: </span>The computation is given by summing the current QPR (which at iteration 0 corresponds to the current PR) with the relative quality of the page multiplied with the elasticity value</p>
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>QPR(i) = QPR(i-1) * dQPR(i-1)</p>
+              <p style={{}}><b>QPR(i)</b> Quality PageRank value of a given page at iteration i; <b>QPR(i-1)</b> Quality PageRank value of a given page at iteration i; <b>dQPR(i-1)</b> QPR changes;</p>
+
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>dQPR = E * (QR-1)</p>
+              <p style={{}}><b>dQPR(i-1)</b> QPR changes for a given page; <b>E</b> Elasticity Value; <b>QR</b> Relative quality of a given page, given by dividing the page's quality by the average quality;</p>
+
+              <p style={{ color: "#4758b8", fontWeight: "bolder", textAlign: "center" }}>Average Quality = sum(Q*PR) / sum(PR)</p>
+              <p style={{}}>The average quality is given by suming the multiplication of each page by its PageRank value and then dividing this sum by the sum of all PageRank values (which should be 1)</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      } else if (this.state.modal.type === 'EXPLAIN_ELASTICITY') {
+        modal = (
+          <Dialog
+            open={this.state.modal.open}
+            onClose={() => this.handleClose()}
+            aria-labelledby='alert-dialog-title'
+            aria-describedby='alert-dialog-description'
+          >
+            <DialogTitle id='alert-dialog-title'>
+              {'Elasticity'}
+            </DialogTitle>
+            <DialogContent style={{ minWidth: '500px', overflow: "hidden", marginTop: "0px" }}>
+              <p><span style={{ color: "#f72f76" }}>Explanation: </span>The elasticity value is a percentile value that measures the resistence/impact quality has on a page's PageRank. The closer to 100 the value, the quicker pages will higher quality will see their QPR improve (and pages with lower quality see thier QPR decrease)</p>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={() => this.handleClose()} color='secondary'>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
       }
     }
 
@@ -2429,7 +2883,9 @@ class Home extends React.Component {
         <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
           <Card style={{ width: '500px' }}>
             <CardContent style={{ overflow: "scroll" }}>
-              <h2 style={{ color: '#38393b' }}>PageRank</h2>
+              <h2 style={{ color: '#38393b' }}>PageRank
+              <span style={{ marginLeft: "5px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainPageRank()}></i></span>
+              </h2>
 
               <hr style={{ color: '#38393b', opacity: 0.2 }}></hr>
 
@@ -2484,7 +2940,9 @@ class Home extends React.Component {
                                   {pagerank.outgoing}
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(round(pagerank.pr, 10), {
+                                  {this.state.useFractions ? format(round(pagerank.pr, 10), {
+                                    fraction: 'fraction'
+                                  }) : format(round(pagerank.pr, 10), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
@@ -2524,11 +2982,14 @@ class Home extends React.Component {
                   control={<Checkbox name='checkedA' value={this.state.solveDeadEnds} checked={this.state.solveDeadEnds} onChange={() => this.changeSolveDeadEnds()} />}
                   label='Solve Dead Ends'
                 />
+                <span style={{ float: "left", marginRight: "20px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainDead()}></i></span>
 
                 <FormControlLabel
                   control={<Checkbox name='checkedA' value={this.state.solveSpiderTraps} checked={this.state.solveSpiderTraps} onChange={() => this.changeSolveSpiderTraps()} />}
                   label='Solve Spider Traps'
                 />
+
+                <span style={{ float: "left", marginRight: "20px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainSpider()}></i></span>
               </FormGroup>
 
               <Grid item md={12} style={{ marginTop: "10px" }}>
@@ -2539,7 +3000,9 @@ class Home extends React.Component {
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jump})</span></h4>
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jump})</span>
+                <span style={{ marginLeft: "15px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainRandomSurfer()}></i></span>
+              </h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
                 <Grid item md={6}>
@@ -2609,8 +3072,12 @@ class Home extends React.Component {
         <div style={{ position: 'absolute', top: '25px', right: '25px' }}>
           <Card style={{ width: '500px' }}>
             <CardContent>
-              <h2 style={{ color: '#38393b' }}>Quality PageRank <span style={{ color: "#999", fontSize: "15px", fontWeight: "lighter" }}>(using PageRank iteration {this.state.pagerank.noIterations} values)</span></h2>
-              <span style={{ color: "#f50057" }}>Elasticity: {this.state.quality.elasticity * 100}%</span>
+              <h2 style={{ color: '#38393b' }}>Quality PageRank
+              <span style={{ marginLeft: "5px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainQualityPR()}></i></span>
+                <span style={{ marginLeft: "5px", color: "#999", fontSize: "13px", fontWeight: "lighter" }}>(using PageRank iteration {this.state.pagerank.noIterations} values)</span></h2>
+              <span style={{ color: "#f50057" }}>Elasticity: {this.state.quality.elasticity * 100}%
+              <span style={{ marginLeft: "10px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainElasticity()}></i></span>
+              </span>
 
               <hr style={{ color: '#38393b', opacity: 0.2, marginTop: "15px" }}></hr>
 
@@ -2659,7 +3126,9 @@ class Home extends React.Component {
                                   <b>{pagerank.id}</b>
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(round(pagerank.base, 5), {
+                                  {this.state.useFractions ? format(round(pagerank.base, 10), {
+                                    fraction: 'fraction'
+                                  }) : format(round(pagerank.base, 5), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
@@ -2667,7 +3136,9 @@ class Home extends React.Component {
                                   {pagerank.quality}
                                 </TableCell>
                                 <TableCell align='left'>
-                                  {format(round(pagerank.current, 10), {
+                                  {this.state.useFractions ? format(round(pagerank.current, 10), {
+                                    fraction: 'fraction'
+                                  }) : format(round(pagerank.current, 10), {
                                     fraction: 'decimal'
                                   })}
                                 </TableCell>
@@ -2701,7 +3172,9 @@ class Home extends React.Component {
                 style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
               ></hr>
 
-              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jumpQ})</span></h4>
+              <h4 style={{ color: '#999' }}>Random Surfer <span style={{ fontWeight: "lighter", marginLeft: "5px" }}>(Jump {this.state.jumpQ})</span>
+                <span style={{ marginLeft: "15px", fontSize: "16px" }}><i class="fas fa-info-circle fa-sm" style={{ color: "#4758b8", cursor: "pointer" }} onClick={() => this.handleOpenExplainRandomSurfer()}></i></span>
+              </h4>
 
               <Grid container spacing={2} style={{ marginTop: '20px' }}>
                 <Grid item md={6}>
@@ -2916,6 +3389,25 @@ class Home extends React.Component {
                   </Button>
                 </Grid>
               </Grid>
+
+              <hr
+                style={{ color: '#38393b', opacity: 0.2, marginTop: '20px' }}
+              ></hr>
+
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.showTooltips} checked={this.state.showTooltips} onChange={() => this.changeShowToolTips()} />}
+                  label='Show explanation tooltips'
+                />
+              </FormGroup>
+
+              <FormGroup row style={{ marginTop: '20px' }}>
+                <FormControlLabel
+                  control={<Checkbox name='checkedA' value={this.state.useFractions} checked={this.state.useFractions} onChange={() => this.changeUseFractions()} />}
+                  label='Use Fractions'
+                />
+              </FormGroup>
+
             </CardContent>
           </Card>
         </div>
