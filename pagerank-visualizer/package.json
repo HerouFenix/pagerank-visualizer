@@ -1,6 +1,10 @@
 {
   "name": "pagerank-visualizer",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "engines": {
+    "npm": "5.8.0",
+    "node": "10.15.2"
+  },
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.28",
