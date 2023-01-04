@@ -1,6 +1,6 @@
 # pagerank-visualizer
 A graphical visualization of the PageRank algorithm
-https://pagerank-visualizer.herokuapp.com/
+https://pagerank-visualizer.netlify.app/
 
 ![pagerank-visualizer logo](https://i.imgur.com/Bp6SfQz.png)
 
